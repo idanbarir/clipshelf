@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Clipboard History
+Name[he]=היסטוריית לוח העתקה
+Comment=Everything you copied, one click away (Super+V)
+Comment[he]=כל מה שהעתקתם, במרחק לחיצה (Super+V)
+Exec=clipshelf
+Icon=edit-paste
+Terminal=false
+Categories=Utility;
+Keywords=clipboard;history;paste;copy;
+StartupNotify=false

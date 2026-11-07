@@ -1,0 +1,23 @@
+[package]
+name = "clipshelf"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "A simple Windows-style (Super+V) clipboard history for Linux, with images"
+readme = "README.md"
+keywords = ["clipboard", "linux", "gtk4", "clipboard-manager"]
+categories = ["gui"]
+
+[dependencies]
+gtk = { version = "0.9", package = "gtk4", features = ["v4_6"] }
+arboard = { version = "3", default-features = false, features = ["image-data"] }
+x11rb = { version = "0.13", features = ["xfixes", "xtest"] }
+image = { version = "0.25", default-features = false, features = ["png"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+libc = "0.2"
+
+[profile.release]
+lto = true
+strip = true
+codegen-units = 1
