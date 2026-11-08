@@ -12,6 +12,7 @@ That's it. No tray icon to configure, no settings maze.
 - 🧯 "Clear all" asks for confirmation first, so nothing disappears by a mis-click
 - 🗑️ Delete single items (trash button or the Delete key)
 - 🔐 Skips passwords copied from KeePassXC and other password managers
+- 🪟 Opens as a small panel in the corner next to the system tray, not in the taskbar — like Windows
 - 🖱️ Tray icon next to the keyboard-language indicator: click to open, right-click for more
 - ⚙️ Simple Settings window (☰ button) — no config files needed
 - 🌍 Interface in 13 languages (follows your system language, or pick one from the tray menu), with proper right-to-left support for Hebrew and Arabic
@@ -89,6 +90,7 @@ Click the **☰** button in the ClipShelf window (or right-click the tray icon) 
 | Paste delay | Raise it if a paste sometimes doesn't arrive |
 | Close when clicking elsewhere | Like Windows |
 | Don't save passwords | Skip items copied from KeePassXC and other password managers |
+| Small panel next to the system tray | On (default): a borderless panel in the corner, not shown in the taskbar. Off: a regular window |
 | Show icon in the system tray | |
 
 Changes are saved immediately. Language and tray-icon changes apply when you close the Settings window.
@@ -120,6 +122,9 @@ clipshelf --quit        stop the background service
   alive, so it keeps owning the clipboard).
 - **Pasting**: `src/paste.rs` — XTest on X11, a `/dev/uinput` virtual keyboard on Wayland.
 - **UI**: GTK 4 (`src/main.rs`), so text shaping and right-to-left layout come from Pango.
+- **Panel mode**: Wayland doesn't let apps position windows or hide them from the taskbar, so in panel
+  mode the window uses the X11 backend (XWayland), where it can (`src/flyout.rs`). With fractional display
+  scaling on GNOME 46 it may look slightly less sharp; switch the setting off for a regular window.
 - **Tray icon**: StatusNotifierItem via [`ksni`](https://crates.io/crates/ksni) (`src/tray.rs`). On plain GNOME it needs the AppIndicator extension (Zorin and Ubuntu ship it).
 
 Contributions are welcome. **Translations:** each language is a short table of strings in `src/i18n.rs`. The current translations were written carefully but not all were reviewed by native speakers — if something sounds off in your language, please open an issue or a pull request.

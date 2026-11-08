@@ -27,6 +27,9 @@ pub struct Config {
     pub language: String,
     /// Show an icon in the system tray (next to the keyboard-language indicator).
     pub tray_icon: bool,
+    /// "flyout": a small borderless panel next to the system tray, not in the
+    /// taskbar (like Windows). "window": a regular window.
+    pub popup_style: String,
 }
 
 impl Default for Config {
@@ -41,6 +44,7 @@ impl Default for Config {
             ignore_passwords: true,
             language: "auto".into(),
             tray_icon: true,
+            popup_style: "flyout".into(),
         }
     }
 }

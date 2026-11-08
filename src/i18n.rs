@@ -42,6 +42,7 @@ pub struct Strings {
     pub s_passwords_hint: &'static str,
     pub s_tray: &'static str,
     pub s_apply_note: &'static str,
+    pub s_flyout: &'static str,
 }
 
 static EN: Strings = Strings {
@@ -78,6 +79,7 @@ static EN: Strings = Strings {
     s_passwords_hint: "Skip items copied from password managers.",
     s_tray: "Show icon in the system tray",
     s_apply_note: "Changes to the language and the tray icon take effect when you close this window.",
+    s_flyout: "Small panel next to the system tray (like Windows)",
 };
 
 static HE: Strings = Strings {
@@ -114,6 +116,7 @@ static HE: Strings = Strings {
     s_passwords_hint: "דילוג על פריטים שהועתקו ממנהלי סיסמאות.",
     s_tray: "הצגת סמל במגש המערכת",
     s_apply_note: "שינויים בשפה ובסמל המגש ייכנסו לתוקף כשתסגרו חלון זה.",
+    s_flyout: "חלונית קטנה ליד מגש המערכת (כמו בווינדוס)",
 };
 
 static AR: Strings = Strings {
@@ -150,6 +153,7 @@ static AR: Strings = Strings {
     s_passwords_hint: "تجاهل العناصر المنسوخة من مديري كلمات المرور.",
     s_tray: "إظهار أيقونة في علبة النظام",
     s_apply_note: "تسري تغييرات اللغة وأيقونة العلبة عند إغلاق هذه النافذة.",
+    s_flyout: "لوحة صغيرة بجوار علبة النظام (كما في ويندوز)",
 };
 
 static DE: Strings = Strings {
@@ -186,6 +190,7 @@ static DE: Strings = Strings {
     s_passwords_hint: "Aus Passwortmanagern kopierte Einträge überspringen.",
     s_tray: "Symbol im Systembereich anzeigen",
     s_apply_note: "Änderungen an Sprache und Symbol werden beim Schließen dieses Fensters wirksam.",
+    s_flyout: "Kleines Fenster neben dem Systembereich (wie unter Windows)",
 };
 
 static ES: Strings = Strings {
@@ -222,6 +227,7 @@ static ES: Strings = Strings {
     s_passwords_hint: "Omitir los elementos copiados desde gestores de contraseñas.",
     s_tray: "Mostrar el icono en la bandeja del sistema",
     s_apply_note: "Los cambios de idioma y del icono se aplican al cerrar esta ventana.",
+    s_flyout: "Panel pequeño junto a la bandeja del sistema (como en Windows)",
 };
 
 static FR: Strings = Strings {
@@ -258,6 +264,7 @@ static FR: Strings = Strings {
     s_passwords_hint: "Ignorer les éléments copiés depuis un gestionnaire de mots de passe.",
     s_tray: "Afficher l’icône dans la zone de notification",
     s_apply_note: "Les changements de langue et d’icône prennent effet à la fermeture de cette fenêtre.",
+    s_flyout: "Petit panneau près de la zone de notification (comme sous Windows)",
 };
 
 static IT: Strings = Strings {
@@ -294,6 +301,7 @@ static IT: Strings = Strings {
     s_passwords_hint: "Ignora gli elementi copiati dai gestori di password.",
     s_tray: "Mostra l’icona nell’area di notifica",
     s_apply_note: "Le modifiche a lingua e icona hanno effetto alla chiusura di questa finestra.",
+    s_flyout: "Piccolo pannello vicino all’area di notifica (come in Windows)",
 };
 
 static NL: Strings = Strings {
@@ -330,6 +338,7 @@ static NL: Strings = Strings {
     s_passwords_hint: "Items uit wachtwoordbeheerders overslaan.",
     s_tray: "Pictogram in het systeemvak tonen",
     s_apply_note: "Wijzigingen in taal en pictogram worden actief zodra je dit venster sluit.",
+    s_flyout: "Klein paneel bij het systeemvak (zoals in Windows)",
 };
 
 static PL: Strings = Strings {
@@ -366,6 +375,7 @@ static PL: Strings = Strings {
     s_passwords_hint: "Pomijaj elementy skopiowane z menedżerów haseł.",
     s_tray: "Pokaż ikonę w zasobniku systemowym",
     s_apply_note: "Zmiany języka i ikony zaczną działać po zamknięciu tego okna.",
+    s_flyout: "Mały panel obok zasobnika systemowego (jak w Windows)",
 };
 
 // Worded to read naturally in both European and Brazilian Portuguese.
@@ -403,6 +413,7 @@ static PT: Strings = Strings {
     s_passwords_hint: "Ignorar itens copiados de cofres de senhas.",
     s_tray: "Mostrar ícone na área de notificação",
     s_apply_note: "As alterações de idioma e do ícone aplicam-se ao fechar esta janela.",
+    s_flyout: "Painel pequeno junto à área de notificação (como no Windows)",
 };
 
 static RU: Strings = Strings {
@@ -439,6 +450,7 @@ static RU: Strings = Strings {
     s_passwords_hint: "Пропускать элементы из менеджеров паролей.",
     s_tray: "Показывать значок в системном трее",
     s_apply_note: "Изменения языка и значка вступят в силу после закрытия этого окна.",
+    s_flyout: "Небольшая панель возле системного трея (как в Windows)",
 };
 
 static TR: Strings = Strings {
@@ -475,6 +487,7 @@ static TR: Strings = Strings {
     s_passwords_hint: "Parola yöneticilerinden kopyalanan öğeleri atla.",
     s_tray: "Sistem tepsisinde simge göster",
     s_apply_note: "Dil ve simge değişiklikleri bu pencereyi kapattığınızda geçerli olur.",
+    s_flyout: "Sistem tepsisinin yanında küçük panel (Windows'taki gibi)",
 };
 
 static UK: Strings = Strings {
@@ -511,6 +524,7 @@ static UK: Strings = Strings {
     s_passwords_hint: "Пропускати елементи з менеджерів паролів.",
     s_tray: "Показувати значок у системному лотку",
     s_apply_note: "Зміни мови та значка наберуть чинності після закриття цього вікна.",
+    s_flyout: "Невелика панель біля системного лотка (як у Windows)",
 };
 
 /// (code, name in its own language, strings)

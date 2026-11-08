@@ -6,6 +6,7 @@
 //! that service to show the popup (GApplication single-instance over D-Bus).
 
 mod config;
+mod flyout;
 mod history;
 mod i18n;
 mod paste;
@@ -31,6 +32,8 @@ const CSS: &str = "
 .clip-meta { font-size: 0.85em; opacity: 0.65; }
 .clip-search { margin: 8px; }
 .clip-row button { min-height: 24px; min-width: 24px; padding: 2px; }
+.clip-flyout { border: 1px solid alpha(currentColor, 0.25); border-radius: 10px; }
+.clip-flyout headerbar { border-radius: 10px 10px 0 0; min-height: 38px; }
 ";
 
 fn print_help() {
@@ -72,6 +75,11 @@ fn main() -> glib::ExitCode {
             return glib::ExitCode::FAILURE;
         }
     };
+
+    // Flyout mode needs the X11 backend (see src/flyout.rs).
+    if config::Config::load().popup_style == "flyout" {
+        flyout::use_x11_backend();
+    }
 
     let app = gtk::Application::builder()
         .application_id(APP_ID)
@@ -189,7 +197,14 @@ impl Ui {
         menu_btn.set_menu_model(Some(&menu));
         menu_btn.set_tooltip_text(Some(t.settings));
         header.pack_end(&menu_btn);
-        win.set_titlebar(Some(&header));
+        let is_flyout = config.popup_style == "flyout" && flyout::setup(&win);
+        if is_flyout {
+            // No window frame: the bar becomes part of the panel.
+            header.set_show_title_buttons(false);
+            win.set_default_size(380, 480);
+        } else {
+            win.set_titlebar(Some(&header));
+        }
 
         let search = gtk::SearchEntry::new();
         search.set_property("placeholder-text", t.search);
@@ -214,6 +229,9 @@ impl Ui {
             .build();
 
         let vbox = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        if is_flyout {
+            vbox.append(&header);
+        }
         vbox.append(&search);
         vbox.append(&scroller);
         win.set_child(Some(&vbox));
@@ -576,6 +594,10 @@ impl Ui {
         pw.set_active(cfg.ignore_passwords);
         add(t.s_passwords, Some(t.s_passwords_hint), pw.upcast_ref());
 
+        let fly_sw = gtk::Switch::new();
+        fly_sw.set_active(cfg.popup_style == "flyout");
+        add(t.s_flyout, None, fly_sw.upcast_ref());
+
         let tray_sw = gtk::Switch::new();
         tray_sw.set_active(cfg.tray_icon);
         add(t.s_tray, None, tray_sw.upcast_ref());
@@ -662,6 +684,16 @@ impl Ui {
                 e(&|ui, c| {
                     c.ignore_passwords = on;
                     ui.ignore_passwords.store(on, Ordering::Relaxed);
+                });
+            });
+        }
+        {
+            let e = edit.clone();
+            fly_sw.connect_active_notify(move |s| {
+                let on = s.is_active();
+                e(&|ui, c| {
+                    c.popup_style = if on { "flyout".into() } else { "window".into() };
+                    ui.restart_needed.set(true);
                 });
             });
         }
