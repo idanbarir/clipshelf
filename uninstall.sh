@@ -31,7 +31,7 @@ PY
 
 if command -v gsettings >/dev/null && grep -qx "$MK" <<<"$SCHEMAS"; then
     remove_from_list $MK custom-keybindings "$KB_BASE/clipshelf"
-    for id in clipshelf clipshelf-he clipshelf-ar clipshelf-ru; do
+    for id in clipshelf clipshelf-alt clipshelf-he clipshelf-ar clipshelf-ru; do
         gsettings reset-recursively "$MK.custom-keybinding:$KB_BASE/$id/" 2>/dev/null || true
     done
     gsettings reset org.gnome.shell.keybindings toggle-message-tray 2>/dev/null || true

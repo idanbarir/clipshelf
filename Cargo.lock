@@ -267,7 +267,7 @@ dependencies = [
 
 [[package]]
 name = "clipshelf"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "arboard",
  "gtk4",

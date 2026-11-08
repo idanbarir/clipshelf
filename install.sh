@@ -119,9 +119,15 @@ fi
 if command -v gsettings >/dev/null && grep -qx "$MK" <<<"$SCHEMAS"; then
     say "Setting the Super+V shortcut"
     # Replace shortcuts added by older versions.
-    for id in clipshelf clipshelf-he clipshelf-ar clipshelf-ru; do remove_shortcut $id; done
+    for id in clipshelf clipshelf-alt clipshelf-he clipshelf-ar clipshelf-ru; do remove_shortcut $id; done
     add_shortcut clipshelf '<Super>v'
     gsettings set "$MK.custom-keybinding:$KB_BASE/clipshelf/" name 'ClipShelf'
+    # Backup shortcut. IBus before 1.5.31 (Ubuntu 24.04, Zorin 18, …) types the
+    # letter instead of letting Super+letter shortcuts through while a non-Latin
+    # layout is active in a text field. It does let Ctrl combinations through,
+    # so Ctrl+Super+V works everywhere.
+    add_shortcut clipshelf-alt '<Control><Super>v'
+    gsettings set "$MK.custom-keybinding:$KB_BASE/clipshelf-alt/" name 'ClipShelf (backup shortcut)'
     # GNOME uses Super+V for the notification list by default; keep Super+M for that.
     if grep -qx org.gnome.shell.keybindings <<<"$SCHEMAS"; then
         tray=$(gsettings get org.gnome.shell.keybindings toggle-message-tray)

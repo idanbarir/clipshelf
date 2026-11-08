@@ -54,7 +54,7 @@ To remove it: `./uninstall.sh` (add `--purge` to also delete your history and se
 
 | Action | How |
 |---|---|
-| Open the history | **Super+V**, or click the ClipShelf icon in the system tray |
+| Open the history | **Super+V** (backup: **Ctrl+Super+V**, see Troubleshooting), or click the tray icon |
 | Paste an item | Click it, or move with ↑/↓ and press **Enter** |
 | Search | Just start typing |
 | Pin / unpin | 📌 button |
@@ -142,7 +142,11 @@ Contributions are welcome. **Translations:** each language is a short table of s
 
 ## Troubleshooting
 
-**Super+V types a letter (e.g. ה or ر) instead of opening ClipShelf.** Versions before 0.7.1 kept a
-virtual keyboard (used for auto-paste on Wayland) open all the time, which made GNOME stop recognising
-Super+letter shortcuts while a non-Latin layout was active. Update to 0.7.1 or later: the virtual keyboard
-now exists only for the moment of the paste.
+**Super+V types a letter (e.g. ה, ر or м) instead of opening ClipShelf — only while typing in a text
+field with a non-Latin layout.** This is a bug in IBus (the input-method service GNOME uses): before
+version 1.5.31 it treats Super+letter as text to type, so *no* Super+letter shortcut works there
+(GNOME's own Super+A neither). It was fixed upstream in May 2024
+([ibus commit 48c4a9c](https://github.com/ibus/ibus/commit/48c4a9c900421b9e77be399a4792974f25a80be6)),
+but Ubuntu 24.04 and distributions based on it (Zorin OS 18, Linux Mint 22, Pop!_OS 24.04…) still ship
+IBus 1.5.29. Until they update, use the backup shortcut **Ctrl+Super+V**, which IBus lets through, or
+click the tray icon. Check your version with `ibus version`.
