@@ -12,7 +12,8 @@ That's it. No tray icon to configure, no settings maze.
 - 🧯 "Clear all" asks for confirmation first, so nothing disappears by a mis-click
 - 🗑️ Delete single items (trash button or the Delete key)
 - 🔐 Skips passwords copied from KeePassXC and other password managers
-- 🌍 Proper right-to-left support: Hebrew and Arabic are shown correctly, and the UI is in English or Hebrew
+- 🖱️ Tray icon next to the keyboard-language indicator: click to open, right-click for language, settings and quit
+- 🌍 Interface in 13 languages (follows your system language, or pick one from the tray menu), with proper right-to-left support for Hebrew and Arabic
 - 🪶 Small native GTK 4 app written in Rust (~1 MB), no background polling — it reacts to clipboard events
 
 ## Install
@@ -42,7 +43,6 @@ The installer (for the current user only, in `~/.local/bin`):
 - sets the **Super+V** shortcut on GNOME-based desktops (Zorin OS, Ubuntu, Pop!_OS, Fedora Workstation…).
   GNOME normally uses Super+V for the notification list; that stays available on **Super+M**.
   The shortcut also works while a Hebrew, Arabic or Russian keyboard layout is active,
-- offers to pin ClipShelf to the taskbar/dock, so you can also open it with a click,
 - on Wayland, optionally asks for permission to paste automatically (see below).
 
 On other desktops (KDE, XFCE, Cinnamon…), add a keyboard shortcut yourself that runs
@@ -54,13 +54,14 @@ To remove it: `./uninstall.sh` (add `--purge` to also delete your history and se
 
 | Action | How |
 |---|---|
-| Open the history | **Super+V**, or click the ClipShelf icon on the taskbar |
+| Open the history | **Super+V**, or click the ClipShelf icon in the system tray |
 | Paste an item | Click it, or move with ↑/↓ and press **Enter** |
 | Search | Just start typing |
 | Pin / unpin | 📌 button |
 | Delete an item | 🗑️ button, or **Delete** |
 | Clear everything except pinned | red **Clear all** button in the title bar (asks first) |
 | Close | **Esc**, Super+V again, or click anywhere else |
+| Change language, open settings, quit | right-click the tray icon |
 
 ## Auto-paste on X11 and Wayland
 
@@ -77,7 +78,7 @@ Terminals use Ctrl+Shift+V for pasting; if you mostly paste into a terminal, cha
 
 ## Settings
 
-`~/.config/clipshelf/config.json` is created on first run:
+Right-click the tray icon → **Open settings file**, or edit `~/.config/clipshelf/config.json` directly:
 
 ```json
 {
@@ -88,7 +89,8 @@ Terminals use Ctrl+Shift+V for pasting; if you mostly paste into a terminal, cha
   "paste_command": null,
   "hide_on_focus_loss": true,
   "ignore_passwords": true,
-  "language": "auto"
+  "language": "auto",
+  "tray_icon": true
 }
 ```
 
@@ -101,7 +103,8 @@ Terminals use Ctrl+Shift+V for pasting; if you mostly paste into a terminal, cha
 | `paste_command` | Use your own command to paste, e.g. `"ydotool key 29:1 47:1 47:0 29:0"` |
 | `hide_on_focus_loss` | Close the popup when you click elsewhere |
 | `ignore_passwords` | Don't record items that password managers mark as secret |
-| `language` | `"auto"` follows your system language (English if it isn't translated yet), or force `"en"` / `"he"` |
+| `language` | `"auto"` follows your system language (English if it isn't translated yet), or a code: `en` `ar` `de` `es` `fr` `he` `it` `nl` `pl` `pt` `ru` `tr` `uk` |
+| `tray_icon` | Show the icon in the system tray |
 
 Restart after editing: `clipshelf --quit && clipshelf --background &`
 
@@ -129,8 +132,9 @@ clipshelf --quit        stop the background service
   alive, so it keeps owning the clipboard).
 - **Pasting**: `src/paste.rs` — XTest on X11, a `/dev/uinput` virtual keyboard on Wayland.
 - **UI**: GTK 4 (`src/main.rs`), so text shaping and right-to-left layout come from Pango.
+- **Tray icon**: StatusNotifierItem via [`ksni`](https://crates.io/crates/ksni) (`src/tray.rs`). On plain GNOME it needs the AppIndicator extension (Zorin and Ubuntu ship it).
 
-Contributions and translations are welcome — a translation is just a table of 12 short strings in `src/i18n.rs`.
+Contributions are welcome. **Translations:** each language is a short table of strings in `src/i18n.rs`. The current translations were written carefully but not all were reviewed by native speakers — if something sounds off in your language, please open an issue or a pull request.
 
 ## License
 

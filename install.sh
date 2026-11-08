@@ -98,28 +98,6 @@ else
     echo "Add one yourself in your keyboard settings that runs:  $EXE --toggle"
 fi
 
-# 3b. Pin to the taskbar / dock (GNOME favorites — used by Zorin's taskbar too).
-DESKTOP_ID=io.github.clipshelf.Clipshelf.desktop
-if grep -qx org.gnome.shell <<<"$SCHEMAS"; then
-    fav=$(gsettings get org.gnome.shell favorite-apps)
-    if ! grep -q "$DESKTOP_ID" <<<"$fav"; then
-        read -rp "Pin ClipShelf to the taskbar? [Y/n] " ans || ans=y
-        if [[ ! "$ans" =~ ^[Nn] ]]; then
-            newfav=$(python3 - "$fav" "$DESKTOP_ID" <<'PY'
-import ast, sys
-cur = sys.argv[1].strip()
-if cur.startswith('@as'):
-    cur = cur[3:].strip()
-lst = ast.literal_eval(cur) if cur else []
-lst.append(sys.argv[2])
-print(str(lst))
-PY
-)
-            gsettings set org.gnome.shell favorite-apps "$newfav"
-        fi
-    fi
-fi
-
 # 4. Optional: auto-paste on Wayland needs permission to create a virtual keyboard.
 if [ "${XDG_SESSION_TYPE:-}" = "wayland" ] && [ ! -f /etc/udev/rules.d/70-clipshelf-uinput.rules ]; then
     echo
@@ -144,4 +122,4 @@ nohup "$EXE" --background >/dev/null 2>&1 &
 disown || true
 
 echo
-say "ClipShelf is installed and running. Press Super+V (or click its taskbar icon) to open your clipboard history."
+say "ClipShelf is installed and running. Press Super+V, or click its icon next to the keyboard-language indicator."

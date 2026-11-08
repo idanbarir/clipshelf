@@ -23,8 +23,10 @@ pub struct Config {
     pub hide_on_focus_loss: bool,
     /// Ignore content marked as secret by password managers (KeePassXC etc.).
     pub ignore_passwords: bool,
-    /// Interface language: "auto" (follow the system), "en" or "he".
+    /// Interface language: "auto" (follow the system) or a code like "en", "he", "de".
     pub language: String,
+    /// Show an icon in the system tray (next to the keyboard-language indicator).
+    pub tray_icon: bool,
 }
 
 impl Default for Config {
@@ -38,27 +40,46 @@ impl Default for Config {
             hide_on_focus_loss: true,
             ignore_passwords: true,
             language: "auto".into(),
+            tray_icon: true,
         }
     }
 }
 
 impl Config {
+    fn path() -> std::path::PathBuf {
+        crate::history::config_dir().join("config.json")
+    }
+
     pub fn load() -> Self {
-        let dir = crate::history::config_dir();
-        let path = dir.join("config.json");
-        match fs::read(&path) {
-            Ok(bytes) => serde_json::from_slice(&bytes).unwrap_or_else(|e| {
-                eprintln!("clipshelf: invalid {}: {e} — using defaults", path.display());
-                Config::default()
-            }),
-            Err(_) => {
-                let cfg = Config::default();
-                let _ = fs::create_dir_all(&dir);
-                if let Ok(s) = serde_json::to_string_pretty(&cfg) {
-                    let _ = fs::write(&path, s);
+        let path = Self::path();
+        let existing = fs::read_to_string(&path).ok();
+        let cfg = match &existing {
+            Some(text) => match serde_json::from_str(text) {
+                Ok(c) => c,
+                Err(e) => {
+                    eprintln!("clipshelf: invalid {}: {e} — using defaults", path.display());
+                    return Config::default();
                 }
-                cfg
+            },
+            None => Config::default(),
+        };
+        // Write the file back so settings added in newer versions show up in it
+        // (the user's own values are kept).
+        if let Ok(s) = serde_json::to_string_pretty(&cfg) {
+            if existing.as_deref().map(str::trim) != Some(s.trim()) {
+                cfg.save();
             }
+        }
+        cfg
+    }
+
+    pub fn save(&self) {
+        let path = Self::path();
+        if let Some(dir) = path.parent() {
+            let _ = fs::create_dir_all(dir);
+        }
+        if let Ok(s) = serde_json::to_string_pretty(self) {
+            let _ = fs::write(&path, s + "\n");
         }
     }
 }

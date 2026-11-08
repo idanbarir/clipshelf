@@ -9,6 +9,7 @@ mod config;
 mod history;
 mod i18n;
 mod paste;
+mod tray;
 mod watcher;
 
 use gtk::prelude::*;
@@ -18,7 +19,7 @@ use std::borrow::Cow;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::sync::mpsc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 const APP_ID: &str = "io.github.clipshelf.Clipshelf";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -126,6 +127,8 @@ struct Ui {
     was_active: Cell<bool>,
     /// A dialog of ours is open: don't hide the popup when it takes focus.
     dialog_open: Cell<bool>,
+    /// When the popup was last hidden (to make a tray click a real toggle).
+    hidden_at: Cell<Option<Instant>>,
     t: &'static i18n::Strings,
 }
 
@@ -212,6 +215,7 @@ impl Ui {
             config,
             was_active: Cell::new(false),
             dialog_open: Cell::new(false),
+            hidden_at: Cell::new(None),
             t,
         });
 
@@ -340,7 +344,87 @@ impl Ui {
             });
         }
 
+        // --- tray icon -------------------------------------------------------
+        if ui.config.tray_icon {
+            let (ttx, trx) = mpsc::channel::<tray::Cmd>();
+            tray::spawn(ttx, t, ui.config.language.clone());
+            let w = Rc::downgrade(&ui);
+            glib::timeout_add_local(Duration::from_millis(50), move || {
+                let Some(ui) = w.upgrade() else {
+                    return glib::ControlFlow::Break;
+                };
+                while let Ok(cmd) = trx.try_recv() {
+                    ui.tray_command(cmd);
+                }
+                glib::ControlFlow::Continue
+            });
+        }
+
         ui
+    }
+
+    fn tray_command(self: &Rc<Self>, cmd: tray::Cmd) {
+        match cmd {
+            tray::Cmd::Toggle(token) => {
+                // Clicking the tray icon takes focus away from the popup, which
+                // hides it a moment before the click arrives: treat that as "close".
+                let just_hidden = self
+                    .hidden_at
+                    .get()
+                    .map(|t| t.elapsed() < Duration::from_millis(400))
+                    .unwrap_or(false);
+                if self.win.is_visible() {
+                    self.hide();
+                } else if !just_hidden {
+                    if let Some(tok) = token {
+                        self.win.set_startup_id(&tok);
+                    }
+                    self.show();
+                }
+            }
+            tray::Cmd::ClearAll => {
+                self.show();
+                self.confirm_clear();
+            }
+            tray::Cmd::Settings => {
+                let path = history::config_dir().join("config.json");
+                self.config.save(); // make sure it exists
+                let file = gio::File::for_path(&path);
+                let app = gio::AppInfo::default_for_type("text/plain", false);
+                let ok = match app {
+                    Some(app) => app.launch(&[file.clone()], None::<&gio::AppLaunchContext>).is_ok(),
+                    None => false,
+                };
+                if !ok {
+                    let _ = gio::AppInfo::launch_default_for_uri(&file.uri(), None::<&gio::AppLaunchContext>);
+                }
+            }
+            tray::Cmd::Language(code) => {
+                let mut cfg = self.config.clone();
+                cfg.language = code;
+                cfg.save();
+                self.restart();
+            }
+            tray::Cmd::Quit => {
+                if let Some(app) = self.win.application() {
+                    app.quit();
+                }
+            }
+        }
+    }
+
+    /// Quits and starts again in the background (used after changing the language).
+    fn restart(&self) {
+        if let Ok(exe) = std::env::current_exe() {
+            let _ = std::process::Command::new("sh")
+                .arg("-c")
+                .arg("sleep 0.8; exec \"$0\" --background")
+                .arg(exe)
+                .spawn();
+        }
+        if let Some(app) = self.win.application() {
+            app.quit();
+        }
     }
 
     fn show(self: &Rc<Self>) {
@@ -365,6 +449,9 @@ impl Ui {
     }
 
     fn hide(&self) {
+        if self.win.is_visible() {
+            self.hidden_at.set(Some(Instant::now()));
+        }
         self.was_active.set(false);
         self.win.set_visible(false);
     }
