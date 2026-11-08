@@ -3,7 +3,8 @@
 //! Methods, in order:
 //!  1. a user-defined command (config `paste_command`)
 //!  2. X11 session: XTest (no setup needed)
-//!  3. a virtual keyboard through /dev/uinput (works on Wayland; needs the
+//!  3. a short-lived virtual keyboard through /dev/uinput, created only for
+//!     the paste itself (works on Wayland; needs the
 //!     udev rule installed by install.sh)
 //!  4. XTest anyway (reaches XWayland apps on Wayland)
 
@@ -54,29 +55,31 @@ fn parse_keys(s: &str) -> Vec<K> {
     }
 }
 
+#[derive(Clone)]
 pub struct Paster {
     keys: Vec<K>,
     command: Option<String>,
     wayland: bool,
-    uinput: Option<Uinput>,
 }
 
 impl Paster {
     pub fn new(keys: &str, command: Option<String>) -> Self {
         let wayland = std::env::var("XDG_SESSION_TYPE").map(|v| v == "wayland").unwrap_or(false)
             || std::env::var_os("WAYLAND_DISPLAY").is_some();
-        // Create the virtual keyboard up front: the compositor needs a moment
-        // to pick up a new input device before it accepts events from it.
-        let uinput = if wayland { Uinput::new().ok() } else { None };
         Paster {
             keys: parse_keys(keys),
             command: command.filter(|c| !c.trim().is_empty()),
             wayland,
-            uinput,
         }
     }
 
+    /// Sends the paste keys. Runs on a background thread so the UI never waits.
     pub fn paste(&self) {
+        let p = self.clone();
+        thread::spawn(move || p.paste_now());
+    }
+
+    fn paste_now(&self) {
         if let Some(cmd) = &self.command {
             if let Err(e) = Command::new("sh").arg("-c").arg(cmd).status() {
                 eprintln!("clipshelf: paste_command failed: {e}");
@@ -86,8 +89,17 @@ impl Paster {
         if !self.wayland && xtest(&self.keys).is_ok() {
             return;
         }
-        if let Some(u) = &self.uinput {
-            if u.combo(&self.keys).is_ok() {
+        // Wayland: a virtual keyboard that exists ONLY for the moment of the
+        // paste. Keeping an extra keyboard device around permanently made
+        // GNOME stop recognising Super+letter shortcuts while a non-Latin
+        // layout (Hebrew, Arabic…) was active.
+        if let Ok(u) = Uinput::new() {
+            // give the desktop a moment to pick up the new device
+            thread::sleep(Duration::from_millis(250));
+            let ok = u.combo(&self.keys).is_ok();
+            thread::sleep(Duration::from_millis(150));
+            drop(u); // removes the device again
+            if ok {
                 return;
             }
         }

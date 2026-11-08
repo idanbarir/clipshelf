@@ -142,7 +142,7 @@ Contributions are welcome. **Translations:** each language is a short table of s
 
 ## Troubleshooting
 
-**Super+V types a letter (e.g. ה or ر) instead of opening ClipShelf.** Standard GNOME handles Super+V
-in every keyboard layout, so something else on the system is intercepting shortcuts while that layout is
-active (for example a GNOME extension or a keyboard-remapping tool). Check whether GNOME's own shortcuts
-(Super+A, Super+L) work in that layout; if they don't, the cause is outside ClipShelf.
+**Super+V types a letter (e.g. ה or ر) instead of opening ClipShelf.** Versions before 0.7.1 kept a
+virtual keyboard (used for auto-paste on Wayland) open all the time, which made GNOME stop recognising
+Super+letter shortcuts while a non-Latin layout was active. Update to 0.7.1 or later: the virtual keyboard
+now exists only for the moment of the paste.
