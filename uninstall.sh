@@ -6,6 +6,7 @@ EXE="$HOME/.local/bin/clipshelf"
 [ -x "$EXE" ] && "$EXE" --quit >/dev/null 2>&1
 rm -f "$EXE" \
       "$HOME/.local/share/applications/io.github.clipshelf.Clipshelf.desktop" \
+      "$HOME/.local/share/applications/io.github.idanbarir.ClipShelf.desktop" \
       "${XDG_CONFIG_HOME:-$HOME/.config}/autostart/clipshelf.desktop"
 
 MK=org.gnome.settings-daemon.plugins.media-keys
@@ -37,6 +38,7 @@ if command -v gsettings >/dev/null && grep -qx "$MK" <<<"$SCHEMAS"; then
 fi
 if grep -qx org.gnome.shell <<<"$SCHEMAS"; then
     remove_from_list org.gnome.shell favorite-apps io.github.clipshelf.Clipshelf.desktop
+    remove_from_list org.gnome.shell favorite-apps io.github.idanbarir.ClipShelf.desktop
 fi
 
 if [ -f /etc/udev/rules.d/70-clipshelf-uinput.rules ]; then

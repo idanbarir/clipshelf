@@ -10,5 +10,5 @@ Icon=edit-paste
 Terminal=false
 Categories=Utility;
 Keywords=clipboard;history;paste;copy;clipshelf;לוח;העתקה;הדבקה;
-StartupWMClass=io.github.clipshelf.Clipshelf
+StartupWMClass=io.github.idanbarir.ClipShelf
 StartupNotify=false

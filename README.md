@@ -43,7 +43,7 @@ The installer (for the current user only, in `~/.local/bin`):
 - installs the program and starts it automatically at login,
 - sets the **Super+V** shortcut on GNOME-based desktops (Zorin OS, Ubuntu, Pop!_OS, Fedora Workstation…).
   GNOME normally uses Super+V for the notification list; that stays available on **Super+M**.
-  The shortcut also works while a Hebrew, Arabic or Russian keyboard layout is active,
+  The shortcut works the same in every keyboard layout (Hebrew, Arabic, Russian…),
 - on Wayland, optionally asks for permission to paste automatically (see below).
 
 On other desktops (KDE, XFCE, Cinnamon…), add a keyboard shortcut yourself that runs
@@ -143,7 +143,6 @@ Contributions are welcome. **Translations:** each language is a short table of s
 
 ## Troubleshooting
 
-**Super+V types a letter (e.g. ה) instead of opening ClipShelf.** GNOME matches custom shortcuts by
-the letter a key produces in the *current* layout. The installer registers Super+V for Latin, Hebrew,
-Arabic and Russian layouts; for another layout, add a shortcut in Settings → Keyboard that runs
-`~/.local/bin/clipshelf --toggle` while that layout is active.
+**Super+V types a letter (e.g. ה or ر) instead of opening ClipShelf.** You have an older version:
+GNOME resolves shortcut letters through the active keyboard layout. Since 0.5 the installer binds the
+physical V key (`<Super>0x37`), which works in every layout — re-run `./install.sh`.

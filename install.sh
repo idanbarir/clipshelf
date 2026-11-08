@@ -38,7 +38,9 @@ install -Dm755 "$BIN" "$EXE"
 
 # 2. Menu entry + autostart at login.
 mkdir -p "$APP_DIR" "$AUTOSTART_DIR"
-sed "s|^Exec=.*|Exec=$EXE|" data/clipshelf.desktop > "$APP_DIR/io.github.clipshelf.Clipshelf.desktop"
+# (older versions used a different app ID)
+rm -f "$APP_DIR/io.github.clipshelf.Clipshelf.desktop"
+sed "s|^Exec=.*|Exec=$EXE|" data/clipshelf.desktop > "$APP_DIR/io.github.idanbarir.ClipShelf.desktop"
 update-desktop-database "$APP_DIR" >/dev/null 2>&1 || true
 sed "s|^Exec=.*|Exec=$EXE --background|" data/clipshelf-autostart.desktop > "$AUTOSTART_DIR/clipshelf.desktop"
 
@@ -69,15 +71,35 @@ PY
     gsettings set "$S" binding "$2"
 }
 
+# remove_shortcut <id>
+remove_shortcut() {
+    local path="$KB_BASE/$1/" current new
+    current=$(gsettings get $MK custom-keybindings)
+    new=$(python3 - "$current" "$path" <<'PY'
+import ast, sys
+cur = sys.argv[1].strip()
+if cur.startswith('@as'):
+    cur = cur[3:].strip()
+lst = [p for p in (ast.literal_eval(cur) if cur else []) if p != sys.argv[2]]
+print(str(lst) if lst else "@as []")
+PY
+)
+    gsettings set $MK custom-keybindings "$new"
+    gsettings reset-recursively "$MK.custom-keybinding:$path" 2>/dev/null || true
+}
+
 if command -v gsettings >/dev/null && grep -qx "$MK" <<<"$SCHEMAS"; then
     say "Setting the Super+V shortcut"
-    add_shortcut clipshelf '<Super>v'
-    # GNOME matches custom shortcuts by the letter the key types in the
-    # *current* layout, so with a Hebrew or Arabic layout active Super+V
-    # types ה / ر instead. Register the same physical key for those layouts too.
-    add_shortcut clipshelf-he '<Super>hebrew_he'
-    add_shortcut clipshelf-ar '<Super>Arabic_ra'
-    add_shortcut clipshelf-ru '<Super>Cyrillic_em'
+    # Bind the *physical* V key (X keycode 0x37 = 55) rather than the letter "v".
+    # GNOME resolves letters through the active keyboard layout, which breaks
+    # the shortcut while a Hebrew, Arabic, Russian… layout is active; a raw
+    # keycode works the same in every layout.
+    add_shortcut clipshelf '<Super>0x37'
+    gsettings set "$MK.custom-keybinding:$KB_BASE/clipshelf/" name 'ClipShelf (Super+V)'
+    # Remove per-layout shortcuts added by version 0.2–0.4 (they'd conflict).
+    remove_shortcut clipshelf-he
+    remove_shortcut clipshelf-ar
+    remove_shortcut clipshelf-ru
 
     # GNOME uses Super+V for the notification list by default; keep Super+M for that.
     if grep -qx org.gnome.shell.keybindings <<<"$SCHEMAS"; then

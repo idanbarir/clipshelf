@@ -23,7 +23,7 @@ use std::sync::Arc;
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
-const APP_ID: &str = "io.github.clipshelf.Clipshelf";
+const APP_ID: &str = "io.github.idanbarir.ClipShelf";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 const CSS: &str = "
