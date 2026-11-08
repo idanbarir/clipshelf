@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
-Name=Clipboard History (background)
+Name=ClipShelf (background)
 Exec=clipshelf --background
 Icon=edit-paste
 Terminal=false

@@ -1,4 +1,4 @@
-# clipshelf
+# ClipShelf
 
 **A simple clipboard history for Linux that works like Windows' Win+V.**
 
@@ -9,6 +9,7 @@ That's it. No tray icon to configure, no settings maze.
 - 🖱️ Click (or Enter) pastes straight into the window you were working in
 - 🔎 Just start typing to search
 - 📌 Pin items you use often — they survive "Clear all" and never fall off the list
+- 🧯 "Clear all" asks for confirmation first, so nothing disappears by a mis-click
 - 🗑️ Delete single items (trash button or the Delete key)
 - 🔐 Skips passwords copied from KeePassXC and other password managers
 - 🌍 Proper right-to-left support: Hebrew and Arabic are shown correctly, and the UI is in English or Hebrew
@@ -39,7 +40,9 @@ The installer (for the current user only, in `~/.local/bin`):
 
 - installs the program and starts it automatically at login,
 - sets the **Super+V** shortcut on GNOME-based desktops (Zorin OS, Ubuntu, Pop!_OS, Fedora Workstation…).
-  GNOME normally uses Super+V for the notification list; that stays available on **Super+M**,
+  GNOME normally uses Super+V for the notification list; that stays available on **Super+M**.
+  The shortcut also works while a Hebrew, Arabic or Russian keyboard layout is active,
+- offers to pin ClipShelf to the taskbar/dock, so you can also open it with a click,
 - on Wayland, optionally asks for permission to paste automatically (see below).
 
 On other desktops (KDE, XFCE, Cinnamon…), add a keyboard shortcut yourself that runs
@@ -51,12 +54,12 @@ To remove it: `./uninstall.sh` (add `--purge` to also delete your history and se
 
 | Action | How |
 |---|---|
-| Open the history | **Super+V** |
+| Open the history | **Super+V**, or click the ClipShelf icon on the taskbar |
 | Paste an item | Click it, or move with ↑/↓ and press **Enter** |
 | Search | Just start typing |
 | Pin / unpin | 📌 button |
 | Delete an item | 🗑️ button, or **Delete** |
-| Clear everything except pinned | button in the title bar |
+| Clear everything except pinned | red **Clear all** button in the title bar (asks first) |
 | Close | **Esc**, Super+V again, or click anywhere else |
 
 ## Auto-paste on X11 and Wayland
@@ -142,3 +145,10 @@ Contributions and translations are welcome — add a language table in `src/i18n
 
 ‏אפשר לחפש פשוט על ידי הקלדה, לנעוץ פריטים (📌), למחוק פריט (🗑️ או Delete), ולסגור ב־Esc.
 ‏עברית וערבית מוצגות כראוי (מימין לשמאל), והממשק מוצג בעברית כשהמערכת בעברית.
+
+## Troubleshooting
+
+**Super+V types a letter (e.g. ה) instead of opening ClipShelf.** GNOME matches custom shortcuts by
+the letter a key produces in the *current* layout. The installer registers Super+V for Latin, Hebrew,
+Arabic and Russian layouts; for another layout, add a shortcut in Settings → Keyboard that runs
+`~/.local/bin/clipshelf --toggle` while that layout is active.

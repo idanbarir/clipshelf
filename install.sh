@@ -39,16 +39,19 @@ install -Dm755 "$BIN" "$EXE"
 # 2. Menu entry + autostart at login.
 mkdir -p "$APP_DIR" "$AUTOSTART_DIR"
 sed "s|^Exec=.*|Exec=$EXE|" data/clipshelf.desktop > "$APP_DIR/io.github.clipshelf.Clipshelf.desktop"
+update-desktop-database "$APP_DIR" >/dev/null 2>&1 || true
 sed "s|^Exec=.*|Exec=$EXE --background|" data/clipshelf-autostart.desktop > "$AUTOSTART_DIR/clipshelf.desktop"
 
 # 3. Super+V keyboard shortcut (GNOME, Zorin, Ubuntu, Pop!_OS…).
 MK=org.gnome.settings-daemon.plugins.media-keys
+KB_BASE=/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings
 SCHEMAS=$(gsettings list-schemas 2>/dev/null || true)
-if command -v gsettings >/dev/null && grep -qx "$MK" <<<"$SCHEMAS"; then
-    say "Setting the Super+V shortcut"
-    KB_PATH=/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/clipshelf/
+
+# add_shortcut <id> <binding>
+add_shortcut() {
+    local path="$KB_BASE/$1/" current new
     current=$(gsettings get $MK custom-keybindings)
-    new=$(python3 - "$current" "$KB_PATH" <<'PY'
+    new=$(python3 - "$current" "$path" <<'PY'
 import ast, sys
 cur = sys.argv[1].strip()
 if cur.startswith('@as'):
@@ -60,10 +63,21 @@ print(str(lst))
 PY
 )
     gsettings set $MK custom-keybindings "$new"
-    S="$MK.custom-keybinding:$KB_PATH"
-    gsettings set "$S" name 'Clipboard history (clipshelf)'
+    local S="$MK.custom-keybinding:$path"
+    gsettings set "$S" name "ClipShelf ($2)"
     gsettings set "$S" command "$EXE --toggle"
-    gsettings set "$S" binding '<Super>v'
+    gsettings set "$S" binding "$2"
+}
+
+if command -v gsettings >/dev/null && grep -qx "$MK" <<<"$SCHEMAS"; then
+    say "Setting the Super+V shortcut"
+    add_shortcut clipshelf '<Super>v'
+    # GNOME matches custom shortcuts by the letter the key types in the
+    # *current* layout, so with a Hebrew or Arabic layout active Super+V
+    # types ה / ر instead. Register the same physical key for those layouts too.
+    add_shortcut clipshelf-he '<Super>hebrew_he'
+    add_shortcut clipshelf-ar '<Super>Arabic_ra'
+    add_shortcut clipshelf-ru '<Super>Cyrillic_em'
 
     # GNOME uses Super+V for the notification list by default; keep Super+M for that.
     if grep -qx org.gnome.shell.keybindings <<<"$SCHEMAS"; then
@@ -82,6 +96,28 @@ PY
 else
     echo "Could not set a shortcut automatically on this desktop."
     echo "Add one yourself in your keyboard settings that runs:  $EXE --toggle"
+fi
+
+# 3b. Pin to the taskbar / dock (GNOME favorites — used by Zorin's taskbar too).
+DESKTOP_ID=io.github.clipshelf.Clipshelf.desktop
+if grep -qx org.gnome.shell <<<"$SCHEMAS"; then
+    fav=$(gsettings get org.gnome.shell favorite-apps)
+    if ! grep -q "$DESKTOP_ID" <<<"$fav"; then
+        read -rp "Pin ClipShelf to the taskbar? [Y/n] " ans || ans=y
+        if [[ ! "$ans" =~ ^[Nn] ]]; then
+            newfav=$(python3 - "$fav" "$DESKTOP_ID" <<'PY'
+import ast, sys
+cur = sys.argv[1].strip()
+if cur.startswith('@as'):
+    cur = cur[3:].strip()
+lst = ast.literal_eval(cur) if cur else []
+lst.append(sys.argv[2])
+print(str(lst))
+PY
+)
+            gsettings set org.gnome.shell favorite-apps "$newfav"
+        fi
+    fi
 fi
 
 # 4. Optional: auto-paste on Wayland needs permission to create a virtual keyboard.
@@ -108,4 +144,4 @@ nohup "$EXE" --background >/dev/null 2>&1 &
 disown || true
 
 echo
-say "clipshelf is installed and running. Press Super+V to open your clipboard history."
+say "ClipShelf is installed and running. Press Super+V (or click its taskbar icon) to open your clipboard history."

@@ -124,6 +124,8 @@ struct Ui {
     clipboard: RefCell<Option<arboard::Clipboard>>,
     paster: paste::Paster,
     was_active: Cell<bool>,
+    /// A dialog of ours is open: don't hide the popup when it takes focus.
+    dialog_open: Cell<bool>,
     t: &'static i18n::Strings,
 }
 
@@ -155,9 +157,12 @@ impl Ui {
             .build();
 
         let header = gtk::HeaderBar::new();
-        let clear_btn = gtk::Button::from_icon_name("edit-clear-all-symbolic");
-        clear_btn.set_tooltip_text(Some(t.clear_all));
-        header.pack_end(&clear_btn);
+        // Red, labelled, and on the opposite side from the window's close button,
+        // so it can't be mistaken for "close".
+        let clear_btn = gtk::Button::with_label(t.clear_all);
+        clear_btn.add_css_class("destructive-action");
+        clear_btn.set_tooltip_text(Some(t.clear_all_tip));
+        header.pack_start(&clear_btn);
         win.set_titlebar(Some(&header));
 
         let search = gtk::SearchEntry::new();
@@ -200,6 +205,7 @@ impl Ui {
             paster,
             config,
             was_active: Cell::new(false),
+            dialog_open: Cell::new(false),
             t,
         });
 
@@ -208,9 +214,7 @@ impl Ui {
             let w = Rc::downgrade(&ui);
             clear_btn.connect_clicked(move |_| {
                 if let Some(ui) = w.upgrade() {
-                    ui.history.borrow_mut().clear_unpinned();
-                    ui.history.borrow().save();
-                    ui.refresh();
+                    ui.confirm_clear();
                 }
             });
         }
@@ -298,7 +302,10 @@ impl Ui {
                 let Some(ui) = w.upgrade() else { return };
                 if win.is_active() {
                     ui.was_active.set(true);
-                } else if ui.was_active.replace(false) && ui.config.hide_on_focus_loss {
+                } else if ui.was_active.replace(false)
+                    && ui.config.hide_on_focus_loss
+                    && !ui.dialog_open.get()
+                {
                     ui.hide();
                 }
             });
@@ -489,6 +496,44 @@ impl Ui {
         let row = gtk::ListBoxRow::new();
         row.set_child(Some(&hbox));
         RowInfo { row, id: e.id.clone(), haystack }
+    }
+
+    /// "Clear all" asks first, so a mis-click can't wipe the history.
+    fn confirm_clear(self: &Rc<Self>) {
+        let n = self.history.borrow().entries.iter().filter(|e| !e.pinned).count();
+        if n == 0 {
+            return;
+        }
+        #[allow(deprecated)]
+        let dlg = gtk::MessageDialog::builder()
+            .transient_for(&self.win)
+            .modal(true)
+            .message_type(gtk::MessageType::Warning)
+            .text(self.t.confirm_title)
+            .secondary_text(self.t.confirm_body.replace("{n}", &n.to_string()))
+            .build();
+        #[allow(deprecated)]
+        {
+            dlg.add_button(self.t.cancel, gtk::ResponseType::Cancel);
+            let del = dlg.add_button(self.t.delete_all, gtk::ResponseType::Accept);
+            del.add_css_class("destructive-action");
+            dlg.set_default_response(gtk::ResponseType::Cancel);
+        }
+        self.dialog_open.set(true);
+        let w = Rc::downgrade(self);
+        #[allow(deprecated)]
+        dlg.connect_response(move |d, resp| {
+            d.close();
+            let Some(ui) = w.upgrade() else { return };
+            ui.dialog_open.set(false);
+            if resp == gtk::ResponseType::Accept {
+                ui.history.borrow_mut().clear_unpinned();
+                ui.history.borrow().save();
+                ui.refresh();
+            }
+            ui.win.present();
+        });
+        dlg.present();
     }
 
     fn delete(&self, id: &str) {

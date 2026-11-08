@@ -9,22 +9,34 @@ rm -f "$EXE" \
       "${XDG_CONFIG_HOME:-$HOME/.config}/autostart/clipshelf.desktop"
 
 MK=org.gnome.settings-daemon.plugins.media-keys
-KB_PATH=/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/clipshelf/
+KB_BASE=/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings
 SCHEMAS=$(gsettings list-schemas 2>/dev/null || true)
-if command -v gsettings >/dev/null && grep -qx "$MK" <<<"$SCHEMAS"; then
-    current=$(gsettings get $MK custom-keybindings)
-    new=$(python3 - "$current" "$KB_PATH" <<'PY'
+
+# remove_from_list <schema> <key> <item-substring>
+remove_from_list() {
+    local cur new
+    cur=$(gsettings get "$1" "$2")
+    new=$(python3 - "$cur" "$3" <<'PY'
 import ast, sys
 cur = sys.argv[1].strip()
 if cur.startswith('@as'):
     cur = cur[3:].strip()
-lst = [p for p in (ast.literal_eval(cur) if cur else []) if p != sys.argv[2]]
+lst = [p for p in (ast.literal_eval(cur) if cur else []) if sys.argv[2] not in p]
 print(str(lst) if lst else "@as []")
 PY
 )
-    gsettings set $MK custom-keybindings "$new"
-    gsettings reset-recursively "$MK.custom-keybinding:$KB_PATH" 2>/dev/null || true
+    gsettings set "$1" "$2" "$new"
+}
+
+if command -v gsettings >/dev/null && grep -qx "$MK" <<<"$SCHEMAS"; then
+    remove_from_list $MK custom-keybindings "$KB_BASE/clipshelf"
+    for id in clipshelf clipshelf-he clipshelf-ar clipshelf-ru; do
+        gsettings reset-recursively "$MK.custom-keybinding:$KB_BASE/$id/" 2>/dev/null || true
+    done
     gsettings reset org.gnome.shell.keybindings toggle-message-tray 2>/dev/null || true
+fi
+if grep -qx org.gnome.shell <<<"$SCHEMAS"; then
+    remove_from_list org.gnome.shell favorite-apps io.github.clipshelf.Clipshelf.desktop
 fi
 
 if [ -f /etc/udev/rules.d/70-clipshelf-uinput.rules ]; then
@@ -37,4 +49,4 @@ if [ "${1:-}" = "--purge" ]; then
     rm -rf "${XDG_DATA_HOME:-$HOME/.local/share}/clipshelf" "${XDG_CONFIG_HOME:-$HOME/.config}/clipshelf"
     echo "History and settings deleted."
 fi
-echo "clipshelf removed."
+echo "ClipShelf removed."

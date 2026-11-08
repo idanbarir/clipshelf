@@ -4,6 +4,12 @@ pub struct Strings {
     pub title: &'static str,
     pub search: &'static str,
     pub clear_all: &'static str,
+    pub clear_all_tip: &'static str,
+    pub confirm_title: &'static str,
+    /// "{n}" is replaced with the number of items.
+    pub confirm_body: &'static str,
+    pub cancel: &'static str,
+    pub delete_all: &'static str,
     pub pin: &'static str,
     pub delete: &'static str,
     pub empty: &'static str,
@@ -11,9 +17,14 @@ pub struct Strings {
 }
 
 static EN: Strings = Strings {
-    title: "Clipboard",
+    title: "ClipShelf",
     search: "Search…",
-    clear_all: "Clear all (pinned items are kept)",
+    clear_all: "Clear all",
+    clear_all_tip: "Delete all items except pinned ones",
+    confirm_title: "Clear the clipboard history?",
+    confirm_body: "{n} items will be deleted permanently.\nPinned items are kept.",
+    cancel: "Cancel",
+    delete_all: "Delete",
     pin: "Pin",
     delete: "Delete",
     empty: "Nothing copied yet.\nEverything you copy will show up here.",
@@ -21,9 +32,14 @@ static EN: Strings = Strings {
 };
 
 static HE: Strings = Strings {
-    title: "לוח העתקה",
+    title: "ClipShelf",
     search: "חיפוש…",
-    clear_all: "ניקוי הכול (פריטים נעוצים יישמרו)",
+    clear_all: "ניקוי הכול",
+    clear_all_tip: "מחיקת כל הפריטים חוץ מהנעוצים",
+    confirm_title: "למחוק את היסטוריית ההעתקות?",
+    confirm_body: "{n} פריטים יימחקו לצמיתות.\nפריטים נעוצים יישמרו.",
+    cancel: "ביטול",
+    delete_all: "מחיקה",
     pin: "נעיצה",
     delete: "מחיקה",
     empty: "עדיין לא הועתק דבר.\nכל מה שתעתיקו יופיע כאן.",
