@@ -54,6 +54,7 @@ impl ksni::Tray for ClipTray {
 
     /// Left click: open/close the history.
     fn activate(&mut self, x: i32, y: i32) {
+        eprintln!("clipshelf: tray icon clicked at {x},{y}");
         if x > 0 || y > 0 {
             self.send(Cmd::Anchor(x, y));
         }

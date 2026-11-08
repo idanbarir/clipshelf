@@ -56,6 +56,19 @@ fn xsurface(win: &gtk::ApplicationWindow) -> Option<X11Surface> {
 }
 
 /// Turns the main window into a flyout. Returns false if not running on X11.
+fn dbg(what: &str) {
+    if std::env::var_os("CLIPSHELF_DEBUG").is_some() {
+        thread_local!(static T0: std::time::Instant = std::time::Instant::now());
+        T0.with(|t| eprintln!("[flyout {:>5} ms] {what}", t.elapsed().as_millis()));
+    }
+}
+
+/// Call right before presenting the panel.
+pub fn cloak(win: &gtk::ApplicationWindow) {
+    dbg("cloak+present");
+    win.add_css_class("clip-cloak");
+}
+
 pub fn setup(win: &gtk::ApplicationWindow) -> bool {
     if !gdk::Display::default()
         .map(|d| d.type_().name().contains("X11"))
@@ -72,13 +85,17 @@ pub fn setup(win: &gtk::ApplicationWindow) -> bool {
             s.set_skip_pager_hint(true);
         }
     });
-    // Appear already in place: invisible until moved to the corner.
+    // Drawn fully transparent ("cloaked", see show()) until it has really
+    // arrived in its corner, so the window manager's centred first position
+    // is never visible.
     win.connect_map(|w| {
+        dbg("map");
         let w2 = w.clone();
         glib::idle_add_local_once(move || {
+            dbg("idle");
             place(&w2);
-            let w3 = w2.clone();
-            glib::timeout_add_local_once(std::time::Duration::from_millis(30), move || w3.set_opacity(1.0));
+            dbg("placed");
+            w2.remove_css_class("clip-cloak");
         });
     });
     true
@@ -147,6 +164,19 @@ fn place(win: &gtk::ApplicationWindow) -> Option<()> {
         mon_bottom - bottom_panel - h - MARGIN
     };
     conn.configure_window(xid, &ConfigureWindowAux::new().x(x).y(y)).ok()?;
+    conn.flush().ok()?;
+    // Wait (max ~150 ms) until the window manager has actually moved it.
+    let start = std::time::Instant::now();
+    while start.elapsed() < std::time::Duration::from_millis(150) {
+        if let Ok(Ok(t)) = conn.translate_coordinates(xid, root, 0, 0).map(|c| c.reply()) {
+            if (t.dst_x as i32 - x).abs() <= 2 && (t.dst_y as i32 - y).abs() <= 2 {
+                dbg("moved");
+                break;
+            }
+            dbg(&format!("waiting: at {},{} want {},{}", t.dst_x, t.dst_y, x, y));
+        }
+        std::thread::sleep(std::time::Duration::from_millis(4));
+    }
 
     // Keep above other windows (_NET_WM_STATE_ADD, _NET_WM_STATE_ABOVE).
     if let (Some(state), Some(above)) = (intern(&conn, "_NET_WM_STATE"), intern(&conn, "_NET_WM_STATE_ABOVE")) {

@@ -34,6 +34,8 @@ const CSS: &str = "
 .clip-row button { min-height: 24px; min-width: 24px; padding: 2px; }
 .clip-flyout { border: 1px solid alpha(currentColor, 0.25); border-radius: 10px; }
 .clip-flyout headerbar { border-radius: 10px 10px 0 0; min-height: 38px; }
+window.clip-cloak { background: transparent; border-color: transparent; box-shadow: none; }
+window.clip-cloak > * { opacity: 0; }
 ";
 
 fn print_help() {
@@ -199,6 +201,10 @@ impl Ui {
         header.pack_end(&menu_btn);
         let is_flyout = config.popup_style == "flyout" && flyout::setup(&win);
         if is_flyout {
+            // Set up the window's drawing in advance (takes ~0.5 s the first
+            // time), so the first Super+V opens instantly.
+            let w = win.clone();
+            glib::idle_add_local_once(move || WidgetExt::realize(&w));
             // No window frame: the bar becomes part of the panel.
             header.set_show_title_buttons(false);
             win.set_default_size(380, 480);
@@ -761,7 +767,7 @@ impl Ui {
         if self.win.has_css_class("clip-flyout") {
             // Invisible until it has been moved to its corner (no flash in
             // the middle of the screen); see flyout.rs.
-            self.win.set_opacity(0.0);
+            flyout::cloak(&self.win);
         }
         self.win.present();
         self.scroller.vadjustment().set_value(0.0);
