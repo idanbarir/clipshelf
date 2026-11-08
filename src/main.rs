@@ -18,6 +18,8 @@ use history::{Entry, Kind};
 use std::borrow::Cow;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
@@ -121,12 +123,18 @@ struct Ui {
     scroller: gtk::ScrolledWindow,
     rows: RefCell<Vec<RowInfo>>,
     history: RefCell<history::History>,
-    config: config::Config,
+    config: RefCell<config::Config>,
     clipboard: RefCell<Option<arboard::Clipboard>>,
-    paster: paste::Paster,
+    paster: RefCell<paste::Paster>,
+    ignore_passwords: Arc<AtomicBool>,
+    settings_win: RefCell<Option<gtk::Window>>,
+    /// Language or tray setting changed: restart when the settings window closes.
+    restart_needed: Cell<bool>,
     was_active: Cell<bool>,
     /// A dialog of ours is open: don't hide the popup when it takes focus.
     dialog_open: Cell<bool>,
+    /// The ☰ menu is open.
+    menu_open: Cell<bool>,
     /// When the popup was last hidden (to make a tray click a real toggle).
     hidden_at: Cell<Option<Instant>>,
     t: &'static i18n::Strings,
@@ -172,6 +180,14 @@ impl Ui {
         clear_btn.add_css_class("destructive-action");
         clear_btn.set_tooltip_text(Some(t.clear_all_tip));
         header.pack_start(&clear_btn);
+        let menu = gio::Menu::new();
+        menu.append(Some(t.settings), Some("win.settings"));
+        menu.append(Some(t.tray_quit), Some("win.quit"));
+        let menu_btn = gtk::MenuButton::new();
+        menu_btn.set_icon_name("open-menu-symbolic");
+        menu_btn.set_menu_model(Some(&menu));
+        menu_btn.set_tooltip_text(Some(t.settings));
+        header.pack_end(&menu_btn);
         win.set_titlebar(Some(&header));
 
         let search = gtk::SearchEntry::new();
@@ -211,10 +227,14 @@ impl Ui {
             rows: RefCell::new(Vec::new()),
             history: RefCell::new(history),
             clipboard: RefCell::new(arboard::Clipboard::new().ok()),
-            paster,
-            config,
+            paster: RefCell::new(paster),
+            ignore_passwords: Arc::new(AtomicBool::new(config.ignore_passwords)),
+            settings_win: RefCell::new(None),
+            restart_needed: Cell::new(false),
+            config: RefCell::new(config),
             was_active: Cell::new(false),
             dialog_open: Cell::new(false),
+            menu_open: Cell::new(false),
             hidden_at: Cell::new(None),
             t,
         });
@@ -312,18 +332,63 @@ impl Ui {
                 let Some(ui) = w.upgrade() else { return };
                 if win.is_active() {
                     ui.was_active.set(true);
-                } else if ui.was_active.replace(false)
-                    && ui.config.hide_on_focus_loss
-                    && !ui.dialog_open.get()
-                {
-                    ui.hide();
+                    return;
+                }
+                if !ui.was_active.get() || !ui.config.borrow().hide_on_focus_loss {
+                    return;
+                }
+                // Focus can flicker briefly (menus, dialogs): check again shortly.
+                let w2 = Rc::downgrade(&ui);
+                glib::timeout_add_local_once(Duration::from_millis(150), move || {
+                    if let Some(ui) = w2.upgrade() {
+                        if ui.win.is_visible()
+                            && !ui.win.is_active()
+                            && !ui.dialog_open.get()
+                            && !ui.menu_open.get()
+                        {
+                            ui.hide();
+                        }
+                    }
+                });
+            });
+        }
+
+        {
+            // The menu's popover takes focus from the window on some systems:
+            // don't treat that as "clicked elsewhere".
+            if let Some(pop) = menu_btn.popover() {
+                let w = Rc::downgrade(&ui);
+                pop.connect_visible_notify(move |p| {
+                    if let Some(ui) = w.upgrade() {
+                        ui.menu_open.set(p.is_visible());
+                    }
+                });
+            }
+        }
+        {
+            let a = gio::SimpleAction::new("settings", None);
+            let w = Rc::downgrade(&ui);
+            a.connect_activate(move |_, _| {
+                if let Some(ui) = w.upgrade() {
+                    ui.open_settings();
                 }
             });
+            ui.win.add_action(&a);
+            let q = gio::SimpleAction::new("quit", None);
+            let w = Rc::downgrade(&ui);
+            q.connect_activate(move |_, _| {
+                if let Some(ui) = w.upgrade() {
+                    if let Some(app) = ui.win.application() {
+                        app.quit();
+                    }
+                }
+            });
+            ui.win.add_action(&q);
         }
 
         // --- clipboard watcher ---------------------------------------------
         let (tx, rx) = mpsc::channel::<Entry>();
-        watcher::spawn(dir, ui.config.ignore_passwords, tx);
+        watcher::spawn(dir, ui.ignore_passwords.clone(), tx);
         {
             let w = Rc::downgrade(&ui);
             glib::timeout_add_local(Duration::from_millis(200), move || {
@@ -345,9 +410,9 @@ impl Ui {
         }
 
         // --- tray icon -------------------------------------------------------
-        if ui.config.tray_icon {
+        if ui.config.borrow().tray_icon {
             let (ttx, trx) = mpsc::channel::<tray::Cmd>();
-            tray::spawn(ttx, t, ui.config.language.clone());
+            tray::spawn(ttx, t, ui.config.borrow().language.clone());
             let w = Rc::downgrade(&ui);
             glib::timeout_add_local(Duration::from_millis(50), move || {
                 let Some(ui) = w.upgrade() else {
@@ -386,21 +451,9 @@ impl Ui {
                 self.show();
                 self.confirm_clear();
             }
-            tray::Cmd::Settings => {
-                let path = history::config_dir().join("config.json");
-                self.config.save(); // make sure it exists
-                let file = gio::File::for_path(&path);
-                let app = gio::AppInfo::default_for_type("text/plain", false);
-                let ok = match app {
-                    Some(app) => app.launch(&[file.clone()], None::<&gio::AppLaunchContext>).is_ok(),
-                    None => false,
-                };
-                if !ok {
-                    let _ = gio::AppInfo::launch_default_for_uri(&file.uri(), None::<&gio::AppLaunchContext>);
-                }
-            }
+            tray::Cmd::Settings => self.open_settings(),
             tray::Cmd::Language(code) => {
-                let mut cfg = self.config.clone();
+                let mut cfg = self.config.borrow().clone();
                 cfg.language = code;
                 cfg.save();
                 self.restart();
@@ -425,6 +478,247 @@ impl Ui {
         if let Some(app) = self.win.application() {
             app.quit();
         }
+    }
+
+    // ---- settings window --------------------------------------------------
+
+    fn open_settings(self: &Rc<Self>) {
+        if let Some(w) = self.settings_win.borrow().as_ref() {
+            w.present();
+            return;
+        }
+        self.hide();
+        let t = self.t;
+        let cfg = self.config.borrow().clone();
+
+        let win = gtk::Window::builder()
+            .title(format!("{} · ClipShelf", t.settings))
+            .default_width(520)
+            .resizable(false)
+            .icon_name("edit-paste")
+            .build();
+        if let Some(app) = self.win.application() {
+            win.set_application(Some(&app));
+        }
+
+        let grid = gtk::Grid::new();
+        grid.set_row_spacing(18);
+        grid.set_column_spacing(24);
+        grid.set_margin_top(20);
+        grid.set_margin_bottom(20);
+        grid.set_margin_start(24);
+        grid.set_margin_end(24);
+        let row = Cell::new(0);
+        let add = |title: &str, hint: Option<&str>, widget: &gtk::Widget| -> gtk::Box {
+            let texts = gtk::Box::new(gtk::Orientation::Vertical, 2);
+            texts.set_hexpand(true);
+            let l = gtk::Label::new(Some(title));
+            l.set_xalign(0.0);
+            l.set_wrap(true);
+            texts.append(&l);
+            if let Some(h) = hint {
+                let hl = gtk::Label::new(Some(h));
+                hl.set_xalign(0.0);
+                hl.set_wrap(true);
+                hl.set_max_width_chars(42);
+                hl.add_css_class("clip-meta");
+                texts.append(&hl);
+            }
+            widget.set_valign(gtk::Align::Center);
+            widget.set_halign(gtk::Align::End);
+            grid.attach(&texts, 0, row.get(), 1, 1);
+            grid.attach(widget, 1, row.get(), 1, 1);
+            row.set(row.get() + 1);
+            texts
+        };
+
+        // Language
+        let mut names: Vec<&str> = vec![t.tray_auto];
+        names.extend(i18n::LANGS.iter().map(|(_, n, _)| *n));
+        let lang = gtk::DropDown::from_strings(&names);
+        let sel = i18n::LANGS
+            .iter()
+            .position(|(c, _, _)| *c == cfg.language)
+            .map(|i| i + 1)
+            .unwrap_or(0);
+        lang.set_selected(sel as u32);
+        add(t.tray_language, None, lang.upcast_ref());
+
+        // Items to keep
+        let max = gtk::SpinButton::with_range(10.0, 1000.0, 10.0);
+        max.set_value(cfg.max_items as f64);
+        add(t.s_max_items, Some(t.s_max_items_hint), max.upcast_ref());
+
+        // Auto-paste + how
+        let auto = gtk::Switch::new();
+        auto.set_active(cfg.auto_paste);
+        add(t.s_auto_paste, Some(t.s_auto_paste_hint), auto.upcast_ref());
+
+        let keys = gtk::DropDown::from_strings(&[t.s_keys_default, t.s_keys_terminal, "Shift+Insert"]);
+        keys.set_selected(match cfg.paste_keys.replace(' ', "").to_lowercase().as_str() {
+            "ctrl+shift+v" | "shift+ctrl+v" => 1,
+            "shift+insert" => 2,
+            _ => 0,
+        });
+        let keys_row = add(t.s_paste_keys, None, keys.upcast_ref());
+
+        let delay = gtk::SpinButton::with_range(50.0, 2000.0, 50.0);
+        delay.set_value(cfg.paste_delay_ms as f64);
+        let delay_row = add(t.s_delay, Some(t.s_delay_hint), delay.upcast_ref());
+
+        // Others
+        let focus = gtk::Switch::new();
+        focus.set_active(cfg.hide_on_focus_loss);
+        add(t.s_hide_focus, None, focus.upcast_ref());
+
+        let pw = gtk::Switch::new();
+        pw.set_active(cfg.ignore_passwords);
+        add(t.s_passwords, Some(t.s_passwords_hint), pw.upcast_ref());
+
+        let tray_sw = gtk::Switch::new();
+        tray_sw.set_active(cfg.tray_icon);
+        add(t.s_tray, None, tray_sw.upcast_ref());
+
+        // auto-paste options only matter when auto-paste is on
+        let set_sens = {
+            let (keys, delay, kr, dr) = (keys.clone(), delay.clone(), keys_row.clone(), delay_row.clone());
+            move |on: bool| {
+                for w in [keys.upcast_ref::<gtk::Widget>(), delay.upcast_ref(), kr.upcast_ref(), dr.upcast_ref()] {
+                    w.set_sensitive(on);
+                }
+            }
+        };
+        set_sens(cfg.auto_paste);
+
+        // --- live updates ---
+        let w = Rc::downgrade(self);
+        let edit = move |f: &dyn Fn(&Rc<Ui>, &mut config::Config)| {
+            if let Some(ui) = w.upgrade() {
+                let mut c = ui.config.borrow().clone();
+                f(&ui, &mut c);
+                c.save();
+                *ui.config.borrow_mut() = c;
+            }
+        };
+        let edit = Rc::new(edit);
+        {
+            let e = edit.clone();
+            lang.connect_selected_notify(move |d| {
+                let i = d.selected() as usize;
+                e(&|ui, c| {
+                    c.language = if i == 0 { "auto".into() } else { i18n::LANGS[i - 1].0.into() };
+                    ui.restart_needed.set(true);
+                });
+            });
+        }
+        {
+            let e = edit.clone();
+            max.connect_value_changed(move |s| {
+                let n = s.value() as usize;
+                e(&|ui, c| {
+                    c.max_items = n;
+                    ui.history.borrow_mut().set_max(n);
+                    ui.history.borrow().save();
+                });
+            });
+        }
+        {
+            let e = edit.clone();
+            auto.connect_active_notify(move |s| {
+                let on = s.is_active();
+                set_sens(on);
+                e(&|_, c| c.auto_paste = on);
+            });
+        }
+        {
+            let e = edit.clone();
+            keys.connect_selected_notify(move |d| {
+                let k = ["ctrl+v", "ctrl+shift+v", "shift+insert"][(d.selected() as usize).min(2)];
+                e(&|ui, c| {
+                    c.paste_keys = k.into();
+                    *ui.paster.borrow_mut() = paste::Paster::new(k, c.paste_command.clone());
+                });
+            });
+        }
+        {
+            let e = edit.clone();
+            delay.connect_value_changed(move |s| {
+                let ms = s.value() as u64;
+                e(&|_, c| c.paste_delay_ms = ms);
+            });
+        }
+        {
+            let e = edit.clone();
+            focus.connect_active_notify(move |s| {
+                let on = s.is_active();
+                e(&|_, c| c.hide_on_focus_loss = on);
+            });
+        }
+        {
+            let e = edit.clone();
+            pw.connect_active_notify(move |s| {
+                let on = s.is_active();
+                e(&|ui, c| {
+                    c.ignore_passwords = on;
+                    ui.ignore_passwords.store(on, Ordering::Relaxed);
+                });
+            });
+        }
+        {
+            let e = edit.clone();
+            tray_sw.connect_active_notify(move |s| {
+                let on = s.is_active();
+                e(&|ui, c| {
+                    c.tray_icon = on;
+                    ui.restart_needed.set(true);
+                });
+            });
+        }
+
+        let note = gtk::Label::new(Some(t.s_apply_note));
+        note.set_wrap(true);
+        note.set_xalign(0.0);
+        note.add_css_class("clip-meta");
+
+        let file_btn = gtk::Button::with_label(t.tray_settings);
+        file_btn.add_css_class("flat");
+        file_btn.set_halign(gtk::Align::Start);
+        file_btn.connect_clicked(|_| open_config_file());
+
+        let vbox = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        vbox.append(&grid);
+        let foot = gtk::Box::new(gtk::Orientation::Vertical, 6);
+        foot.set_margin_start(24);
+        foot.set_margin_end(24);
+        foot.set_margin_bottom(16);
+        foot.append(&note);
+        foot.append(&file_btn);
+        vbox.append(&foot);
+        win.set_child(Some(&vbox));
+
+        let w = Rc::downgrade(self);
+        win.connect_close_request(move |_| {
+            if let Some(ui) = w.upgrade() {
+                ui.settings_win.borrow_mut().take();
+                if ui.restart_needed.replace(false) {
+                    ui.restart();
+                }
+            }
+            glib::Propagation::Proceed
+        });
+        let key = gtk::EventControllerKey::new();
+        let ww = win.clone();
+        key.connect_key_pressed(move |_, k, _, _| {
+            if k == gdk::Key::Escape {
+                ww.close();
+                return glib::Propagation::Stop;
+            }
+            glib::Propagation::Proceed
+        });
+        win.add_controller(key);
+
+        *self.settings_win.borrow_mut() = Some(win.clone());
+        win.present();
     }
 
     fn show(self: &Rc<Self>) {
@@ -680,11 +974,15 @@ impl Ui {
             eprintln!("clipshelf: could not set the clipboard");
         }
         self.hide();
-        if ok && self.config.auto_paste {
+        let (auto_paste, delay) = {
+            let c = self.config.borrow();
+            (c.auto_paste, c.paste_delay_ms)
+        };
+        if ok && auto_paste {
             let w = Rc::downgrade(self);
-            glib::timeout_add_local_once(Duration::from_millis(self.config.paste_delay_ms), move || {
+            glib::timeout_add_local_once(Duration::from_millis(delay), move || {
                 if let Some(ui) = w.upgrade() {
-                    ui.paster.paste();
+                    ui.paster.borrow().paste();
                 }
             });
         }
@@ -703,4 +1001,19 @@ fn starts_rtl(s: &str) -> bool {
         }
     }
     false
+}
+
+/// Opens config.json in the user's text editor (for advanced options).
+fn open_config_file() {
+    let path = history::config_dir().join("config.json");
+    if !path.exists() {
+        config::Config::default().save();
+    }
+    let file = gio::File::for_path(&path);
+    let ok = gio::AppInfo::default_for_type("text/plain", false)
+        .map(|app| app.launch(&[file.clone()], None::<&gio::AppLaunchContext>).is_ok())
+        .unwrap_or(false);
+    if !ok {
+        let _ = gio::AppInfo::launch_default_for_uri(&file.uri(), None::<&gio::AppLaunchContext>);
+    }
 }

@@ -112,8 +112,8 @@ impl ksni::Tray for ClipTray {
             }
             .into(),
             StandardItem {
-                label: self.t.tray_settings.into(),
-                icon_name: "document-edit-symbolic".into(),
+                label: format!("{}…", self.t.settings),
+                icon_name: "preferences-system-symbolic".into(),
                 activate: Box::new(|t: &mut Self| t.send(Cmd::Settings)),
                 ..Default::default()
             }

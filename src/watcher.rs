@@ -7,7 +7,9 @@
 use crate::history::{self, Entry, Kind};
 use std::error::Error;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::Sender;
+use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
 use x11rb::connection::Connection;
@@ -21,11 +23,11 @@ const MAX_TEXT: usize = 1 << 20;
 const THUMB_W: u32 = 360;
 const THUMB_H: u32 = 140;
 
-pub fn spawn(dir: PathBuf, ignore_passwords: bool, tx: Sender<Entry>) {
+pub fn spawn(dir: PathBuf, ignore_passwords: Arc<AtomicBool>, tx: Sender<Entry>) {
     thread::Builder::new()
         .name("clipboard-watcher".into())
         .spawn(move || loop {
-            if let Err(e) = run(&dir, ignore_passwords, &tx) {
+            if let Err(e) = run(&dir, &ignore_passwords, &tx) {
                 eprintln!("clipshelf: clipboard watcher error: {e}; retrying");
             }
             thread::sleep(Duration::from_secs(2));
@@ -43,7 +45,7 @@ fn intern(conn: &RustConnection, name: &str) -> Result<u32, Box<dyn Error>> {
     Ok(conn.intern_atom(false, name.as_bytes())?.reply()?.atom)
 }
 
-fn run(dir: &Path, ignore_passwords: bool, tx: &Sender<Entry>) -> Result<(), Box<dyn Error>> {
+fn run(dir: &Path, ignore_passwords: &AtomicBool, tx: &Sender<Entry>) -> Result<(), Box<dyn Error>> {
     let (conn, screen_num) = x11rb::connect(None)?;
     let root = conn.setup().roots[screen_num].root;
     let win = conn.generate_id()?;
@@ -131,7 +133,7 @@ fn capture(
     atoms: &Atoms,
     cb: &mut arboard::Clipboard,
     dir: &Path,
-    ignore_passwords: bool,
+    ignore_passwords: &AtomicBool,
     last: &mut Option<String>,
     tx: &Sender<Entry>,
 ) {
@@ -139,7 +141,7 @@ fn capture(
     let has = |n: &str| names.iter().any(|x| x == n);
 
     // Password managers (KeePassXC, KDE) mark secrets with this target.
-    if ignore_passwords && has("x-kde-passwordManagerHint") {
+    if ignore_passwords.load(Ordering::Relaxed) && has("x-kde-passwordManagerHint") {
         return;
     }
     // Copied files in a file manager: not useful as history (Windows skips them too).

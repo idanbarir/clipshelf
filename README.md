@@ -12,7 +12,8 @@ That's it. No tray icon to configure, no settings maze.
 - 🧯 "Clear all" asks for confirmation first, so nothing disappears by a mis-click
 - 🗑️ Delete single items (trash button or the Delete key)
 - 🔐 Skips passwords copied from KeePassXC and other password managers
-- 🖱️ Tray icon next to the keyboard-language indicator: click to open, right-click for language, settings and quit
+- 🖱️ Tray icon next to the keyboard-language indicator: click to open, right-click for more
+- ⚙️ Simple Settings window (☰ button) — no config files needed
 - 🌍 Interface in 13 languages (follows your system language, or pick one from the tray menu), with proper right-to-left support for Hebrew and Arabic
 - 🪶 Small native GTK 4 app written in Rust (~1 MB), no background polling — it reacts to clipboard events
 
@@ -61,7 +62,7 @@ To remove it: `./uninstall.sh` (add `--purge` to also delete your history and se
 | Delete an item | 🗑️ button, or **Delete** |
 | Clear everything except pinned | red **Clear all** button in the title bar (asks first) |
 | Close | **Esc**, Super+V again, or click anywhere else |
-| Change language, open settings, quit | right-click the tray icon |
+| Settings, language, quit | **☰** button in the window, or right-click the tray icon |
 
 ## Auto-paste on X11 and Wayland
 
@@ -78,35 +79,23 @@ Terminals use Ctrl+Shift+V for pasting; if you mostly paste into a terminal, cha
 
 ## Settings
 
-Right-click the tray icon → **Open settings file**, or edit `~/.config/clipshelf/config.json` directly:
-
-```json
-{
-  "max_items": 100,
-  "auto_paste": true,
-  "paste_keys": "ctrl+v",
-  "paste_delay_ms": 200,
-  "paste_command": null,
-  "hide_on_focus_loss": true,
-  "ignore_passwords": true,
-  "language": "auto",
-  "tray_icon": true
-}
-```
+Click the **☰** button in the ClipShelf window (or right-click the tray icon) and choose **Settings**:
 
 | Setting | Meaning |
 |---|---|
-| `max_items` | How many (unpinned) items to keep |
-| `auto_paste` | `false` = only copy the item, don't press Ctrl+V |
-| `paste_keys` | `"ctrl+v"`, `"ctrl+shift+v"` or `"shift+insert"` |
-| `paste_delay_ms` | Wait before pasting, so focus returns to your window. Raise it if pastes get lost |
-| `paste_command` | Use your own command to paste, e.g. `"ydotool key 29:1 47:1 47:0 29:0"` |
-| `hide_on_focus_loss` | Close the popup when you click elsewhere |
-| `ignore_passwords` | Don't record items that password managers mark as secret |
-| `language` | `"auto"` follows your system language (English if it isn't translated yet), or a code: `en` `ar` `de` `es` `fr` `he` `it` `nl` `pl` `pt` `ru` `tr` `uk` |
-| `tray_icon` | Show the icon in the system tray |
+| Language | Follow the system language, or pick one of 13 languages |
+| Items to keep | How many items to remember (pinned items are always kept) |
+| Paste automatically | Paste into the window you were working in as soon as you choose an item. Off = only copy it |
+| Paste using | Ctrl+V for most programs, Ctrl+Shift+V for terminals, or Shift+Insert |
+| Paste delay | Raise it if a paste sometimes doesn't arrive |
+| Close when clicking elsewhere | Like Windows |
+| Don't save passwords | Skip items copied from KeePassXC and other password managers |
+| Show icon in the system tray | |
 
-Restart after editing: `clipshelf --quit && clipshelf --background &`
+Changes are saved immediately. Language and tray-icon changes apply when you close the Settings window.
+
+Advanced: everything is stored in `~/.config/clipshelf/config.json` (the Settings window has a button to open it).
+The file also has `paste_command`, for using your own paste tool, e.g. `"ydotool key 29:1 47:1 47:0 29:0"`.
 
 History is stored in `~/.local/share/clipshelf/` (`history.json` plus an `images/` folder) and
 never leaves your computer.

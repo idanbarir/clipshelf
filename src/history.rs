@@ -121,6 +121,11 @@ impl History {
         }
     }
 
+    pub fn set_max(&mut self, max: usize) {
+        self.max = max.max(1);
+        self.trim();
+    }
+
     pub fn get(&self, id: &str) -> Option<&Entry> {
         self.entries.iter().find(|e| e.id == id)
     }
