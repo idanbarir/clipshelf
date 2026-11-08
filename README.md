@@ -18,7 +18,7 @@ That's it. No tray icon to configure, no settings maze.
 
 ### Option A: ready-made release (no compiling)
 
-1. Download the latest `clipshelf-…-linux-x86_64.tar.gz` from the [Releases](../../releases) page.
+1. Download the latest `clipshelf-…-linux-x86_64.tar.gz` from the [Releases](https://github.com/idanbarir/clipshelf/releases) page.
 2. Extract it, open a terminal in the extracted folder, and run:
 
    ```bash
@@ -30,7 +30,7 @@ That's it. No tray icon to configure, no settings maze.
 ```bash
 sudo apt install build-essential pkg-config libgtk-4-dev git
 curl --proto '=https' -sSf https://sh.rustup.rs | sh     # if you don't have Rust yet
-git clone https://github.com/YOUR-USERNAME/clipshelf.git
+git clone https://github.com/idanbarir/clipshelf.git
 cd clipshelf
 ./install.sh
 ```
