@@ -466,6 +466,7 @@ impl Ui {
                     self.show();
                 }
             }
+            tray::Cmd::Anchor(x, y) => flyout::set_anchor(x, y),
             tray::Cmd::ClearAll => {
                 self.show();
                 self.confirm_clear();
@@ -757,6 +758,11 @@ impl Ui {
     fn show(self: &Rc<Self>) {
         self.search.set_text("");
         self.refresh();
+        if self.win.has_css_class("clip-flyout") {
+            // Invisible until it has been moved to its corner (no flash in
+            // the middle of the screen); see flyout.rs.
+            self.win.set_opacity(0.0);
+        }
         self.win.present();
         self.scroller.vadjustment().set_value(0.0);
         if let Some(row) = self.first_visible_row() {

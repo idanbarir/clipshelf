@@ -12,7 +12,8 @@ That's it. No tray icon to configure, no settings maze.
 - 🧯 "Clear all" asks for confirmation first, so nothing disappears by a mis-click
 - 🗑️ Delete single items (trash button or the Delete key)
 - 🔐 Skips passwords copied from KeePassXC and other password managers
-- 🪟 Opens as a small panel in the corner next to the system tray, not in the taskbar — like Windows
+- 🪟 Opens as a small panel right above the tray icon, not in the taskbar — like Windows
+  (it learns where the icon is the first time you click it; until then it opens in the corner)
 - 🖱️ Tray icon next to the keyboard-language indicator: click to open, right-click for more
 - ⚙️ Simple Settings window (☰ button) — no config files needed
 - 🌍 Interface in 13 languages (follows your system language, or pick one from the tray menu), with proper right-to-left support for Hebrew and Arabic

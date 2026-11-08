@@ -13,7 +13,36 @@ use x11rb::protocol::xproto::{
     AtomEnum, ClientMessageEvent, ConfigureWindowAux, ConnectionExt as _, EventMask,
 };
 
+use std::cell::Cell;
+
 const MARGIN: i32 = 10;
+
+thread_local! {
+    /// Last known position of the tray icon (from a click on it).
+    static ANCHOR: Cell<Option<(i32, i32)>> = Cell::new(load_anchor());
+}
+
+fn anchor_file() -> std::path::PathBuf {
+    crate::history::data_dir().join("tray-position")
+}
+
+fn load_anchor() -> Option<(i32, i32)> {
+    let s = std::fs::read_to_string(anchor_file()).ok()?;
+    let mut it = s.split_whitespace().map(|v| v.parse::<i32>());
+    match (it.next(), it.next()) {
+        (Some(Ok(x)), Some(Ok(y))) => Some((x, y)),
+        _ => None,
+    }
+}
+
+/// Remembers where the tray icon is, so the panel opens right above it —
+/// also when opened with the keyboard shortcut, and after a restart.
+pub fn set_anchor(x: i32, y: i32) {
+    if ANCHOR.with(|a| a.get()) != Some((x, y)) {
+        ANCHOR.with(|a| a.set(Some((x, y))));
+        let _ = std::fs::write(anchor_file(), format!("{x} {y}\n"));
+    }
+}
 
 /// Call before GTK starts.
 pub fn use_x11_backend() {
@@ -45,7 +74,6 @@ pub fn setup(win: &gtk::ApplicationWindow) -> bool {
     });
     // Appear already in place: invisible until moved to the corner.
     win.connect_map(|w| {
-        w.set_opacity(0.0);
         let w2 = w.clone();
         glib::idle_add_local_once(move || {
             place(&w2);
@@ -67,9 +95,11 @@ fn place(win: &gtk::ApplicationWindow) -> Option<()> {
     let (conn, screen) = x11rb::connect(None).ok()?;
     let root = conn.setup().roots[screen].root;
 
-    // Monitor under the mouse pointer, else the first one.
+    // The tray icon's monitor if we know where it is, else the one under the
+    // mouse pointer.
+    let anchor = ANCHOR.with(|a| a.get());
     let ptr = conn.query_pointer(root).ok()?.reply().ok()?;
-    let (px, py) = (ptr.root_x as i32, ptr.root_y as i32);
+    let (px, py) = anchor.unwrap_or((ptr.root_x as i32, ptr.root_y as i32));
     let display = WidgetExt::display(win);
     let monitors = display.monitors();
     let mut geos = Vec::new();
@@ -103,7 +133,14 @@ fn place(win: &gtk::ApplicationWindow) -> Option<()> {
     // The panel has a fixed size; the allocation may not be final yet.
     let (dw, dh) = win.default_size();
     let (w, h) = (win.width().max(dw).max(200), win.height().max(dh).max(200));
-    let x = mon.x() + mon.width() - w - MARGIN;
+    let right = mon.x() + mon.width() - w - MARGIN;
+    let x = match anchor {
+        // centred over the tray icon, kept on screen
+        Some((ax, ay)) if ax >= mon.x() && ax < mon.x() + mon.width() && ay >= mon.y() && ay < mon_bottom => {
+            (ax - w / 2).clamp(mon.x() + MARGIN, right)
+        }
+        _ => right,
+    };
     let y = if top_panel > bottom_panel {
         mon.y() + top_panel + MARGIN
     } else {

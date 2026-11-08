@@ -10,6 +10,8 @@ use std::sync::mpsc::Sender;
 pub enum Cmd {
     /// Show or hide the popup; carries the Wayland activation token if any.
     Toggle(Option<String>),
+    /// Where the tray icon was clicked (screen coordinates), if known.
+    Anchor(i32, i32),
     ClearAll,
     Settings,
     Language(String),
@@ -51,7 +53,10 @@ impl ksni::Tray for ClipTray {
     }
 
     /// Left click: open/close the history.
-    fn activate(&mut self, _x: i32, _y: i32) {
+    fn activate(&mut self, x: i32, y: i32) {
+        if x > 0 || y > 0 {
+            self.send(Cmd::Anchor(x, y));
+        }
         self.send(Cmd::Toggle(ksni::current_xdg_activation_token()));
     }
 
