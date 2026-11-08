@@ -7,6 +7,7 @@
 
 mod config;
 mod history;
+mod hotkey;
 mod i18n;
 mod paste;
 mod tray;
@@ -51,6 +52,17 @@ History:  ~/.local/share/clipshelf/"
 
 fn main() -> glib::ExitCode {
     let args: Vec<String> = std::env::args().collect();
+
+    // System service mode: layout-independent Super+V (see src/hotkey.rs).
+    if args.get(1).map(String::as_str) == Some("--hotkey-daemon") {
+        let timeout = args
+            .iter()
+            .position(|a| a == "--timeout")
+            .and_then(|i| args.get(i + 1))
+            .and_then(|v| v.parse::<u64>().ok())
+            .map(Duration::from_secs);
+        std::process::exit(hotkey::run_daemon(timeout));
+    }
     // Translate flags into plain words so GApplication forwards them untouched.
     let cmd = match args.get(1).map(String::as_str) {
         None | Some("show") | Some("--show") => "show",
@@ -404,6 +416,17 @@ impl Ui {
                     if ui.win.is_visible() {
                         ui.refresh();
                     }
+                }
+                glib::ControlFlow::Continue
+            });
+        }
+
+        // --- Super+V from the keyboard-shortcut service (SIGUSR1) ----------
+        {
+            let w = Rc::downgrade(&ui);
+            glib::unix_signal_add_local(libc::SIGUSR1, move || {
+                if let Some(ui) = w.upgrade() {
+                    ui.tray_command(tray::Cmd::Toggle(None));
                 }
                 glib::ControlFlow::Continue
             });

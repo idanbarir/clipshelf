@@ -18,6 +18,8 @@ jobs:
       - name: Install GTK 4
         run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev
       - uses: dtolnay/rust-toolchain@stable
+      - name: Test
+        run: cargo test --release --locked
       - name: Build
         run: cargo build --release --locked
       - name: Package

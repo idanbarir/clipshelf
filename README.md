@@ -41,9 +41,7 @@ cd clipshelf
 The installer (for the current user only, in `~/.local/bin`):
 
 - installs the program and starts it automatically at login,
-- sets the **Super+V** shortcut on GNOME-based desktops (Zorin OS, Ubuntu, Pop!_OS, Fedora Workstation…).
-  GNOME normally uses Super+V for the notification list; that stays available on **Super+M**.
-  The shortcut works the same in every keyboard layout (Hebrew, Arabic, Russian…),
+- sets up **Super+V** so that it works in every keyboard layout and on every desktop (see below),
 - on Wayland, optionally asks for permission to paste automatically (see below).
 
 On other desktops (KDE, XFCE, Cinnamon…), add a keyboard shortcut yourself that runs
@@ -63,6 +61,24 @@ To remove it: `./uninstall.sh` (add `--purge` to also delete your history and se
 | Clear everything except pinned | red **Clear all** button in the title bar (asks first) |
 | Close | **Esc**, Super+V again, or click anywhere else |
 | Settings, language, quit | **☰** button in the window, or right-click the tray icon |
+
+## How Super+V works
+
+Desktop shortcut systems match keys through the *active keyboard layout*, and on some setups
+(for example GNOME on Wayland with a Hebrew or Arabic layout active) letter shortcuts never fire —
+Super+V just types ה or ر. So ClipShelf comes with a small **keyboard service** that works one level
+lower, on the physical keys, like keyd or kmonad do:
+
+- it passes every key through unchanged to a virtual keyboard, except Super+V, which opens ClipShelf;
+- it works on any desktop (GNOME, KDE, Cinnamon, XFCE…), on X11 and Wayland, in every layout;
+- it works alongside keyd and similar tools.
+
+The installer asks before installing it (it needs your password once), then runs a **30-second trial**:
+if you don't confirm that everything works, it switches itself off and nothing is enabled. In that case
+the installer falls back to a regular desktop shortcut.
+
+Safety: if the service ever fails, the kernel gives the keyboard straight back. Emergency stop at any
+time: hold **Backspace + Escape + Enter**. Service status: `systemctl status clipshelf-hotkey`.
 
 ## Auto-paste on X11 and Wayland
 
@@ -120,6 +136,9 @@ clipshelf --quit        stop the background service
 - **Setting the clipboard**: [`arboard`](https://crates.io/crates/arboard) (the service stays
   alive, so it keeps owning the clipboard).
 - **Pasting**: `src/paste.rs` — XTest on X11, a `/dev/uinput` virtual keyboard on Wayland.
+- **Super+V service**: `src/hotkey.rs` — a root system service (`clipshelf --hotkey-daemon`) that grabs
+  keyboards with EVIOCGRAB, forwards events to a uinput device and signals the app with SIGUSR1.
+  The key-handling logic is unit-tested (`cargo test`).
 - **UI**: GTK 4 (`src/main.rs`), so text shaping and right-to-left layout come from Pango.
 - **Tray icon**: StatusNotifierItem via [`ksni`](https://crates.io/crates/ksni) (`src/tray.rs`). On plain GNOME it needs the AppIndicator extension (Zorin and Ubuntu ship it).
 
@@ -143,6 +162,6 @@ Contributions are welcome. **Translations:** each language is a short table of s
 
 ## Troubleshooting
 
-**Super+V types a letter (e.g. ה or ر) instead of opening ClipShelf.** You have an older version:
-GNOME resolves shortcut letters through the active keyboard layout. Since 0.5 the installer binds the
-physical V key (`<Super>0x37`), which works in every layout — re-run `./install.sh`.
+**Super+V types a letter (e.g. ה or ر) instead of opening ClipShelf.** The keyboard service is not
+installed or not running. Re-run `./install.sh` and accept the keyboard service, or check
+`systemctl status clipshelf-hotkey`.

@@ -41,6 +41,24 @@ if grep -qx org.gnome.shell <<<"$SCHEMAS"; then
     remove_from_list org.gnome.shell favorite-apps io.github.idanbarir.ClipShelf.desktop
 fi
 
+if [ -f /etc/systemd/system/clipshelf-hotkey.service ]; then
+    echo "Removing the Super+V keyboard service (asks for your password)…"
+    sudo systemctl disable --now clipshelf-hotkey 2>/dev/null
+    sudo rm -f /etc/systemd/system/clipshelf-hotkey.service
+    sudo rm -rf /usr/local/libexec/clipshelf /etc/modules-load.d/clipshelf-uinput.conf
+    sudo systemctl daemon-reload
+    Q=/etc/libinput/local-overrides.quirks
+    if sudo grep -qs 'ClipShelf virtual keyboard' "$Q"; then
+        sudo python3 - "$Q" <<'PY'
+import sys, re
+p = sys.argv[1]
+s = open(p).read()
+s = re.sub(r'\n?\[ClipShelf virtual keyboard\]\nMatchName=ClipShelf virtual keyboard\nAttrKeyboardIntegration=internal\n', '\n', s)
+open(p, 'w').write(s.rstrip('\n') + '\n' if s.strip() else '')
+PY
+    fi
+fi
+
 if [ -f /etc/udev/rules.d/70-clipshelf-uinput.rules ]; then
     echo "Removing the auto-paste permission (asks for your password)…"
     sudo rm -f /etc/udev/rules.d/70-clipshelf-uinput.rules /etc/modules-load.d/clipshelf-uinput.conf
