@@ -23,6 +23,8 @@ pub struct Config {
     pub hide_on_focus_loss: bool,
     /// Ignore content marked as secret by password managers (KeePassXC etc.).
     pub ignore_passwords: bool,
+    /// Interface language: "auto" (follow the system), "en" or "he".
+    pub language: String,
 }
 
 impl Default for Config {
@@ -35,6 +37,7 @@ impl Default for Config {
             paste_command: None,
             hide_on_focus_loss: true,
             ignore_passwords: true,
+            language: "auto".into(),
         }
     }
 }

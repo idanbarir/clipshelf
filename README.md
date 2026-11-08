@@ -87,7 +87,8 @@ Terminals use Ctrl+Shift+V for pasting; if you mostly paste into a terminal, cha
   "paste_delay_ms": 200,
   "paste_command": null,
   "hide_on_focus_loss": true,
-  "ignore_passwords": true
+  "ignore_passwords": true,
+  "language": "auto"
 }
 ```
 
@@ -100,6 +101,7 @@ Terminals use Ctrl+Shift+V for pasting; if you mostly paste into a terminal, cha
 | `paste_command` | Use your own command to paste, e.g. `"ydotool key 29:1 47:1 47:0 29:0"` |
 | `hide_on_focus_loss` | Close the popup when you click elsewhere |
 | `ignore_passwords` | Don't record items that password managers mark as secret |
+| `language` | `"auto"` follows your system language (English if it isn't translated yet), or force `"en"` / `"he"` |
 
 Restart after editing: `clipshelf --quit && clipshelf --background &`
 
@@ -128,7 +130,7 @@ clipshelf --quit        stop the background service
 - **Pasting**: `src/paste.rs` — XTest on X11, a `/dev/uinput` virtual keyboard on Wayland.
 - **UI**: GTK 4 (`src/main.rs`), so text shaping and right-to-left layout come from Pango.
 
-Contributions and translations are welcome — add a language table in `src/i18n.rs`.
+Contributions and translations are welcome — a translation is just a table of 12 short strings in `src/i18n.rs`.
 
 ## License
 

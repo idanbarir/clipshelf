@@ -1,6 +1,8 @@
 //! Minimal UI translations (English / Hebrew). Add a language by adding a table.
 
 pub struct Strings {
+    /// Right-to-left interface layout.
+    pub rtl: bool,
     pub title: &'static str,
     pub search: &'static str,
     pub clear_all: &'static str,
@@ -17,6 +19,7 @@ pub struct Strings {
 }
 
 static EN: Strings = Strings {
+    rtl: false,
     title: "ClipShelf",
     search: "Search…",
     clear_all: "Clear all",
@@ -32,6 +35,7 @@ static EN: Strings = Strings {
 };
 
 static HE: Strings = Strings {
+    rtl: true,
     title: "ClipShelf",
     search: "חיפוש…",
     clear_all: "ניקוי הכול",
@@ -57,8 +61,13 @@ fn lang() -> String {
     String::new()
 }
 
-pub fn strings() -> &'static Strings {
-    let l = lang();
+/// `setting` is the config value: "auto" follows the system language,
+/// otherwise a language code ("en", "he"). Unknown languages fall back to English.
+pub fn strings(setting: &str) -> &'static Strings {
+    let l = match setting.trim().to_lowercase().as_str() {
+        "" | "auto" => lang(),
+        other => other.to_string(),
+    };
     if l.starts_with("he") || l.starts_with("iw") {
         &HE
     } else {

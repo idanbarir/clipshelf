@@ -131,8 +131,14 @@ struct Ui {
 
 impl Ui {
     fn new(app: &gtk::Application) -> Rc<Self> {
-        let t = i18n::strings();
         let config = config::Config::load();
+        let t = i18n::strings(&config.language);
+        // Lay the window out to match the chosen language, not just the system locale.
+        gtk::Widget::set_default_direction(if t.rtl {
+            gtk::TextDirection::Rtl
+        } else {
+            gtk::TextDirection::Ltr
+        });
         let dir = history::data_dir();
         let history = history::History::load(dir.clone(), config.max_items);
 
@@ -380,8 +386,9 @@ impl Ui {
     }
 
     fn refresh(self: &Rc<Self>) {
-        while let Some(child) = self.list.first_child() {
-            self.list.remove(&child);
+        // Remove only our rows (first_child() would also catch the placeholder label).
+        for r in self.rows.borrow_mut().drain(..) {
+            self.list.remove(&r.row);
         }
         let entries = self.history.borrow().entries.clone();
         let mut rows = Vec::with_capacity(entries.len());
