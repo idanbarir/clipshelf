@@ -20,6 +20,23 @@ const MARGIN: i32 = 10;
 thread_local! {
     /// Last known position of the tray icon (from a click on it).
     static ANCHOR: Cell<Option<(i32, i32)>> = Cell::new(load_anchor());
+    /// Where the user dragged the panel (top-left corner), remembered.
+    static SAVED: Cell<Option<(i32, i32)>> = Cell::new(load_pos(&saved_file()));
+    /// Where ClipShelf last put it.
+    static LAST_PLACED: Cell<Option<(i32, i32)>> = const { Cell::new(None) };
+}
+
+fn saved_file() -> std::path::PathBuf {
+    crate::history::data_dir().join("panel-position")
+}
+
+fn load_pos(path: &std::path::Path) -> Option<(i32, i32)> {
+    let s = std::fs::read_to_string(path).ok()?;
+    let mut it = s.split_whitespace().map(|v| v.parse::<i32>());
+    match (it.next(), it.next()) {
+        (Some(Ok(x)), Some(Ok(y))) => Some((x, y)),
+        _ => None,
+    }
 }
 
 fn anchor_file() -> std::path::PathBuf {
@@ -27,12 +44,7 @@ fn anchor_file() -> std::path::PathBuf {
 }
 
 fn load_anchor() -> Option<(i32, i32)> {
-    let s = std::fs::read_to_string(anchor_file()).ok()?;
-    let mut it = s.split_whitespace().map(|v| v.parse::<i32>());
-    match (it.next(), it.next()) {
-        (Some(Ok(x)), Some(Ok(y))) => Some((x, y)),
-        _ => None,
-    }
+    load_pos(&anchor_file())
 }
 
 /// Remembers where the tray icon is, so the panel opens right above it —
@@ -99,14 +111,10 @@ fn intern(conn: &impl Connection, name: &str) -> Option<u32> {
     Some(conn.intern_atom(false, name.as_bytes()).ok()?.reply().ok()?.atom)
 }
 
-/// Moves the window to the corner of the current monitor next to the panel
-/// (bottom-right for a bottom taskbar, top-right for a top bar) and keeps it on top.
-pub fn place(win: &gtk::ApplicationWindow) -> Option<()> {
-    dbg("place");
-    let xid = xsurface(win)?.xid() as u32;
-    let (conn, screen) = x11rb::connect(None).ok()?;
-    let root = conn.setup().roots[screen].root;
-
+/// Where the panel should be: where the user last dragged it, else the
+/// corner next to the panel/system tray (bottom-right for a bottom taskbar,
+/// top-right for a top bar) of the monitor under the pointer.
+fn target(win: &gtk::ApplicationWindow, conn: &impl Connection, root: u32) -> Option<(i32, i32)> {
     // The tray icon's monitor if we know where it is, else the one under the
     // mouse pointer.
     let anchor = ANCHOR.with(|a| a.get());
@@ -158,34 +166,85 @@ pub fn place(win: &gtk::ApplicationWindow) -> Option<()> {
     } else {
         mon_bottom - bottom_panel - h - MARGIN
     };
-    // Declare this as the window's own position (USPosition/PPosition in
-    // WM_NORMAL_HINTS). Window managers then map it right here every time it
-    // is shown again, instead of centring it first (Mutter honours this
-    // before "center new windows", see mutter src/core/place.c).
-    if let Some(hints_atom) = intern(&conn, "WM_NORMAL_HINTS") {
-        if let Some(size_hints) = intern(&conn, "WM_SIZE_HINTS") {
-            let mut v: Vec<u32> = conn
-                .get_property(false, xid, hints_atom, size_hints, 0, 18)
-                .ok()
-                .and_then(|c| c.reply().ok())
-                .and_then(|r| r.value32().map(|it| it.collect()))
-                .unwrap_or_default();
-            v.resize(18, 0);
-            v[0] |= 1 | 4; // USPosition | PPosition
-            v[1] = x as u32;
-            v[2] = y as u32;
-            let _ = x11rb::wrapper::ConnectionExt::change_property32(
-                &conn,
-                x11rb::protocol::xproto::PropMode::REPLACE,
-                xid,
-                hints_atom,
-                size_hints,
-                &v,
-            );
+    // A position the user chose by dragging wins, if it is still on a screen.
+    if let Some((sx, sy)) = SAVED.with(|s| s.get()) {
+        if let Some(g) = geos.iter().find(|g| sx >= g.x() - w / 2 && sx < g.x() + g.width() - w / 2 && sy >= g.y() && sy < g.y() + g.height() - 40) {
+            let cx = sx.clamp(g.x(), g.x() + g.width() - w);
+            let cy = sy.clamp(g.y(), g.y() + g.height() - h);
+            return Some((cx, cy));
         }
     }
+    Some((x, y))
+}
+
+/// Declares (x, y) as the window's own position (USPosition/PPosition in
+/// WM_NORMAL_HINTS) and moves it there. Window managers honour a declared
+/// position when the window is mapped — Mutter even before "center new
+/// windows" (mutter src/core/place.c) — so it appears right there.
+fn set_position(conn: &impl Connection, xid: u32, x: i32, y: i32) -> Option<()> {
+    if let (Some(hints_atom), Some(size_hints)) = (intern(conn, "WM_NORMAL_HINTS"), intern(conn, "WM_SIZE_HINTS")) {
+        let mut v: Vec<u32> = conn
+            .get_property(false, xid, hints_atom, size_hints, 0, 18)
+            .ok()
+            .and_then(|c| c.reply().ok())
+            .and_then(|r| r.value32().map(|it| it.collect()))
+            .unwrap_or_default();
+        v.resize(18, 0);
+        v[0] |= 1 | 4; // USPosition | PPosition
+        v[1] = x as u32;
+        v[2] = y as u32;
+        let _ = x11rb::wrapper::ConnectionExt::change_property32(
+            conn,
+            x11rb::protocol::xproto::PropMode::REPLACE,
+            xid,
+            hints_atom,
+            size_hints,
+            &v,
+        );
+    }
     conn.configure_window(xid, &ConfigureWindowAux::new().x(x).y(y)).ok()?;
-    conn.flush().ok()?;
+    LAST_PLACED.with(|l| l.set(Some((x, y))));
+    conn.flush().ok()
+}
+
+/// Call BEFORE showing the (hidden) panel: puts the hidden window where it
+/// must appear, so the window manager maps it there directly.
+pub fn preposition(win: &gtk::ApplicationWindow) -> Option<()> {
+    dbg("preposition");
+    let xid = xsurface(win)?.xid() as u32;
+    let (conn, screen) = x11rb::connect(None).ok()?;
+    let root = conn.setup().roots[screen].root;
+    let (x, y) = target(win, &conn, root)?;
+    set_position(&conn, xid, x, y)
+}
+
+/// Call before hiding: if the user dragged the panel somewhere else,
+/// remember that spot for next time.
+pub fn remember(win: &gtk::ApplicationWindow) -> Option<()> {
+    let xid = xsurface(win)?.xid() as u32;
+    let (conn, screen) = x11rb::connect(None).ok()?;
+    let root = conn.setup().roots[screen].root;
+    let t = conn.translate_coordinates(xid, root, 0, 0).ok()?.reply().ok()?;
+    let (x, y) = (t.dst_x as i32, t.dst_y as i32);
+    let placed = LAST_PLACED.with(|l| l.get())?;
+    if (x - placed.0).abs() > 8 || (y - placed.1).abs() > 8 {
+        dbg(&format!("user moved the panel to {x},{y}"));
+        SAVED.with(|s| s.set(Some((x, y))));
+        LAST_PLACED.with(|l| l.set(Some((x, y))));
+        let _ = std::fs::write(saved_file(), format!("{x} {y}\n"));
+    }
+    Some(())
+}
+
+/// Call after the panel is mapped: makes sure it is in place (waiting until
+/// the window manager confirms), keeps it on top and gives it the focus.
+pub fn place(win: &gtk::ApplicationWindow) -> Option<()> {
+    dbg("place");
+    let xid = xsurface(win)?.xid() as u32;
+    let (conn, screen) = x11rb::connect(None).ok()?;
+    let root = conn.setup().roots[screen].root;
+    let (x, y) = target(win, &conn, root)?;
+    set_position(&conn, xid, x, y)?;
     // Wait (max ~150 ms) until the window manager has actually moved it.
     let start = std::time::Instant::now();
     while start.elapsed() < std::time::Duration::from_millis(150) {

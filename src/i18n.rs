@@ -4,6 +4,7 @@
 //! and add it to `LANGS`. Corrections from native speakers are very welcome.
 //! Sentences avoid putting a number next to a noun, so no plural rules are needed.
 
+#[allow(dead_code)] // a few strings are kept for future use
 pub struct Strings {
     /// Right-to-left interface layout.
     pub rtl: bool,
@@ -46,6 +47,7 @@ pub struct Strings {
     pub about_menu: &'static str,
     pub about_comment: &'static str,
     pub close: &'static str,
+    pub version: &'static str,
 }
 
 static EN: Strings = Strings {
@@ -86,6 +88,7 @@ static EN: Strings = Strings {
     about_menu: "About ClipShelf",
     about_comment: "Clipboard history for Linux, just like Win+V on Windows",
     close: "Close",
+    version: "Version",
 };
 
 static HE: Strings = Strings {
@@ -126,6 +129,7 @@ static HE: Strings = Strings {
     about_menu: "אודות ClipShelf",
     about_comment: "היסטוריית לוח העתקה ללינוקס, בדיוק כמו Win+V בווינדוס",
     close: "סגירה",
+    version: "גרסה",
 };
 
 static AR: Strings = Strings {
@@ -166,6 +170,7 @@ static AR: Strings = Strings {
     about_menu: "حول ClipShelf",
     about_comment: "سجل الحافظة للينكس، تمامًا مثل Win+V في ويندوز",
     close: "إغلاق",
+    version: "الإصدار",
 };
 
 static DE: Strings = Strings {
@@ -206,6 +211,7 @@ static DE: Strings = Strings {
     about_menu: "Über ClipShelf",
     about_comment: "Zwischenablage-Verlauf für Linux – wie Win+V unter Windows",
     close: "Schließen",
+    version: "Version",
 };
 
 static ES: Strings = Strings {
@@ -246,6 +252,7 @@ static ES: Strings = Strings {
     about_menu: "Acerca de ClipShelf",
     about_comment: "Historial del portapapeles para Linux, como Win+V en Windows",
     close: "Cerrar",
+    version: "Versión",
 };
 
 static FR: Strings = Strings {
@@ -286,6 +293,7 @@ static FR: Strings = Strings {
     about_menu: "À propos de ClipShelf",
     about_comment: "Historique du presse-papiers pour Linux, comme Win+V sous Windows",
     close: "Fermer",
+    version: "Version",
 };
 
 static IT: Strings = Strings {
@@ -326,6 +334,7 @@ static IT: Strings = Strings {
     about_menu: "Informazioni su ClipShelf",
     about_comment: "Cronologia degli appunti per Linux, come Win+V in Windows",
     close: "Chiudi",
+    version: "Versione",
 };
 
 static NL: Strings = Strings {
@@ -366,6 +375,7 @@ static NL: Strings = Strings {
     about_menu: "Over ClipShelf",
     about_comment: "Klembordgeschiedenis voor Linux, net als Win+V in Windows",
     close: "Sluiten",
+    version: "Versie",
 };
 
 static PL: Strings = Strings {
@@ -406,6 +416,7 @@ static PL: Strings = Strings {
     about_menu: "O programie ClipShelf",
     about_comment: "Historia schowka dla Linuksa, jak Win+V w Windows",
     close: "Zamknij",
+    version: "Wersja",
 };
 
 // Worded to read naturally in both European and Brazilian Portuguese.
@@ -447,6 +458,7 @@ static PT: Strings = Strings {
     about_menu: "Sobre o ClipShelf",
     about_comment: "Histórico da área de transferência para Linux, como o Win+V no Windows",
     close: "Fechar",
+    version: "Versão",
 };
 
 static RU: Strings = Strings {
@@ -487,6 +499,7 @@ static RU: Strings = Strings {
     about_menu: "О программе ClipShelf",
     about_comment: "История буфера обмена для Linux — как Win+V в Windows",
     close: "Закрыть",
+    version: "Версия",
 };
 
 static TR: Strings = Strings {
@@ -527,6 +540,7 @@ static TR: Strings = Strings {
     about_menu: "ClipShelf hakkında",
     about_comment: "Linux için pano geçmişi, Windows'taki Win+V gibi",
     close: "Kapat",
+    version: "Sürüm",
 };
 
 static UK: Strings = Strings {
@@ -567,6 +581,7 @@ static UK: Strings = Strings {
     about_menu: "Про ClipShelf",
     about_comment: "Історія буфера обміну для Linux — як Win+V у Windows",
     close: "Закрити",
+    version: "Версія",
 };
 
 /// (code, name in its own language, strings)
