@@ -41,7 +41,11 @@ impl ksni::Tray for ClipTray {
     }
 
     fn icon_name(&self) -> String {
-        "edit-paste-symbolic".into()
+        "io.github.idanbarir.ClipShelf-symbolic".into()
+    }
+
+    fn icon_theme_path(&self) -> String {
+        std::env::var("HOME").map(|h| format!("{h}/.local/share/icons")).unwrap_or_default()
     }
 
     fn tool_tip(&self) -> ToolTip {
@@ -55,6 +59,11 @@ impl ksni::Tray for ClipTray {
     /// Left click: open/close the history.
     fn activate(&mut self, x: i32, y: i32) {
         eprintln!("clipshelf: tray icon clicked at {x},{y}");
+        // Diagnostics for "open above the tray icon": what the tray reports.
+        let _ = std::fs::write(
+            crate::history::data_dir().join("tray-last-click"),
+            format!("{x} {y}\n"),
+        );
         if x > 0 || y > 0 {
             self.send(Cmd::Anchor(x, y));
         }

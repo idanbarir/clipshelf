@@ -2,7 +2,7 @@
 Type=Application
 Name=ClipShelf (background)
 Exec=clipshelf --background
-Icon=edit-paste
+Icon=io.github.idanbarir.ClipShelf
 Terminal=false
 NoDisplay=true
 X-GNOME-Autostart-enabled=true

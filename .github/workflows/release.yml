@@ -25,7 +25,7 @@ jobs:
           name=clipshelf-${GITHUB_REF_NAME//\//-}-linux-x86_64
           mkdir -p "$name/data"
           cp target/release/clipshelf install.sh uninstall.sh README.md LICENSE "$name/"
-          cp data/*.desktop "$name/data/"
+          cp -r data/* "$name/data/"
           tar czf "$name.tar.gz" "$name"
           echo "ARCHIVE=$name.tar.gz" >> "$GITHUB_ENV"
       - uses: actions/upload-artifact@v4

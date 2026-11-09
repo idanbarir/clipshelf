@@ -7,7 +7,7 @@
 
 use gdk4_x11::X11Surface;
 use gtk::prelude::*;
-use gtk::{gdk, glib};
+use gtk::gdk;
 use x11rb::connection::Connection;
 use x11rb::protocol::xproto::{
     AtomEnum, ClientMessageEvent, ConfigureWindowAux, ConnectionExt as _, EventMask,
@@ -38,6 +38,7 @@ fn load_anchor() -> Option<(i32, i32)> {
 /// Remembers where the tray icon is, so the panel opens right above it —
 /// also when opened with the keyboard shortcut, and after a restart.
 pub fn set_anchor(x: i32, y: i32) {
+    dbg(&format!("anchor {x},{y}"));
     if ANCHOR.with(|a| a.get()) != Some((x, y)) {
         ANCHOR.with(|a| a.set(Some((x, y))));
         let _ = std::fs::write(anchor_file(), format!("{x} {y}\n"));
@@ -63,10 +64,16 @@ fn dbg(what: &str) {
     }
 }
 
-/// Call right before presenting the panel.
+/// Makes the panel fully transparent (drawn by GTK itself, so it works with
+/// every window manager).
 pub fn cloak(win: &gtk::ApplicationWindow) {
-    dbg("cloak+present");
+    dbg("cloak");
     win.add_css_class("clip-cloak");
+}
+
+pub fn uncloak(win: &gtk::ApplicationWindow) {
+    dbg("uncloak");
+    win.remove_css_class("clip-cloak");
 }
 
 pub fn setup(win: &gtk::ApplicationWindow) -> bool {
@@ -85,19 +92,6 @@ pub fn setup(win: &gtk::ApplicationWindow) -> bool {
             s.set_skip_pager_hint(true);
         }
     });
-    // Drawn fully transparent ("cloaked", see show()) until it has really
-    // arrived in its corner, so the window manager's centred first position
-    // is never visible.
-    win.connect_map(|w| {
-        dbg("map");
-        let w2 = w.clone();
-        glib::idle_add_local_once(move || {
-            dbg("idle");
-            place(&w2);
-            dbg("placed");
-            w2.remove_css_class("clip-cloak");
-        });
-    });
     true
 }
 
@@ -107,7 +101,8 @@ fn intern(conn: &impl Connection, name: &str) -> Option<u32> {
 
 /// Moves the window to the corner of the current monitor next to the panel
 /// (bottom-right for a bottom taskbar, top-right for a top bar) and keeps it on top.
-fn place(win: &gtk::ApplicationWindow) -> Option<()> {
+pub fn place(win: &gtk::ApplicationWindow) -> Option<()> {
+    dbg("place");
     let xid = xsurface(win)?.xid() as u32;
     let (conn, screen) = x11rb::connect(None).ok()?;
     let root = conn.setup().roots[screen].root;
@@ -163,6 +158,32 @@ fn place(win: &gtk::ApplicationWindow) -> Option<()> {
     } else {
         mon_bottom - bottom_panel - h - MARGIN
     };
+    // Declare this as the window's own position (USPosition/PPosition in
+    // WM_NORMAL_HINTS). Window managers then map it right here every time it
+    // is shown again, instead of centring it first (Mutter honours this
+    // before "center new windows", see mutter src/core/place.c).
+    if let Some(hints_atom) = intern(&conn, "WM_NORMAL_HINTS") {
+        if let Some(size_hints) = intern(&conn, "WM_SIZE_HINTS") {
+            let mut v: Vec<u32> = conn
+                .get_property(false, xid, hints_atom, size_hints, 0, 18)
+                .ok()
+                .and_then(|c| c.reply().ok())
+                .and_then(|r| r.value32().map(|it| it.collect()))
+                .unwrap_or_default();
+            v.resize(18, 0);
+            v[0] |= 1 | 4; // USPosition | PPosition
+            v[1] = x as u32;
+            v[2] = y as u32;
+            let _ = x11rb::wrapper::ConnectionExt::change_property32(
+                &conn,
+                x11rb::protocol::xproto::PropMode::REPLACE,
+                xid,
+                hints_atom,
+                size_hints,
+                &v,
+            );
+        }
+    }
     conn.configure_window(xid, &ConfigureWindowAux::new().x(x).y(y)).ok()?;
     conn.flush().ok()?;
     // Wait (max ~150 ms) until the window manager has actually moved it.

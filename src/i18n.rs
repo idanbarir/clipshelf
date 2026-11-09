@@ -43,6 +43,9 @@ pub struct Strings {
     pub s_tray: &'static str,
     pub s_apply_note: &'static str,
     pub s_flyout: &'static str,
+    pub about_menu: &'static str,
+    pub about_comment: &'static str,
+    pub close: &'static str,
 }
 
 static EN: Strings = Strings {
@@ -80,6 +83,9 @@ static EN: Strings = Strings {
     s_tray: "Show icon in the system tray",
     s_apply_note: "Changes to the language and the tray icon take effect when you close this window.",
     s_flyout: "Small panel next to the system tray (like Windows)",
+    about_menu: "About ClipShelf",
+    about_comment: "Clipboard history for Linux, just like Win+V on Windows",
+    close: "Close",
 };
 
 static HE: Strings = Strings {
@@ -117,6 +123,9 @@ static HE: Strings = Strings {
     s_tray: "הצגת סמל במגש המערכת",
     s_apply_note: "שינויים בשפה ובסמל המגש ייכנסו לתוקף כשתסגרו חלון זה.",
     s_flyout: "חלונית קטנה ליד מגש המערכת (כמו בווינדוס)",
+    about_menu: "אודות ClipShelf",
+    about_comment: "היסטוריית לוח העתקה ללינוקס, בדיוק כמו Win+V בווינדוס",
+    close: "סגירה",
 };
 
 static AR: Strings = Strings {
@@ -154,6 +163,9 @@ static AR: Strings = Strings {
     s_tray: "إظهار أيقونة في علبة النظام",
     s_apply_note: "تسري تغييرات اللغة وأيقونة العلبة عند إغلاق هذه النافذة.",
     s_flyout: "لوحة صغيرة بجوار علبة النظام (كما في ويندوز)",
+    about_menu: "حول ClipShelf",
+    about_comment: "سجل الحافظة للينكس، تمامًا مثل Win+V في ويندوز",
+    close: "إغلاق",
 };
 
 static DE: Strings = Strings {
@@ -191,6 +203,9 @@ static DE: Strings = Strings {
     s_tray: "Symbol im Systembereich anzeigen",
     s_apply_note: "Änderungen an Sprache und Symbol werden beim Schließen dieses Fensters wirksam.",
     s_flyout: "Kleines Fenster neben dem Systembereich (wie unter Windows)",
+    about_menu: "Über ClipShelf",
+    about_comment: "Zwischenablage-Verlauf für Linux – wie Win+V unter Windows",
+    close: "Schließen",
 };
 
 static ES: Strings = Strings {
@@ -228,6 +243,9 @@ static ES: Strings = Strings {
     s_tray: "Mostrar el icono en la bandeja del sistema",
     s_apply_note: "Los cambios de idioma y del icono se aplican al cerrar esta ventana.",
     s_flyout: "Panel pequeño junto a la bandeja del sistema (como en Windows)",
+    about_menu: "Acerca de ClipShelf",
+    about_comment: "Historial del portapapeles para Linux, como Win+V en Windows",
+    close: "Cerrar",
 };
 
 static FR: Strings = Strings {
@@ -265,6 +283,9 @@ static FR: Strings = Strings {
     s_tray: "Afficher l’icône dans la zone de notification",
     s_apply_note: "Les changements de langue et d’icône prennent effet à la fermeture de cette fenêtre.",
     s_flyout: "Petit panneau près de la zone de notification (comme sous Windows)",
+    about_menu: "À propos de ClipShelf",
+    about_comment: "Historique du presse-papiers pour Linux, comme Win+V sous Windows",
+    close: "Fermer",
 };
 
 static IT: Strings = Strings {
@@ -302,6 +323,9 @@ static IT: Strings = Strings {
     s_tray: "Mostra l’icona nell’area di notifica",
     s_apply_note: "Le modifiche a lingua e icona hanno effetto alla chiusura di questa finestra.",
     s_flyout: "Piccolo pannello vicino all’area di notifica (come in Windows)",
+    about_menu: "Informazioni su ClipShelf",
+    about_comment: "Cronologia degli appunti per Linux, come Win+V in Windows",
+    close: "Chiudi",
 };
 
 static NL: Strings = Strings {
@@ -339,6 +363,9 @@ static NL: Strings = Strings {
     s_tray: "Pictogram in het systeemvak tonen",
     s_apply_note: "Wijzigingen in taal en pictogram worden actief zodra je dit venster sluit.",
     s_flyout: "Klein paneel bij het systeemvak (zoals in Windows)",
+    about_menu: "Over ClipShelf",
+    about_comment: "Klembordgeschiedenis voor Linux, net als Win+V in Windows",
+    close: "Sluiten",
 };
 
 static PL: Strings = Strings {
@@ -376,6 +403,9 @@ static PL: Strings = Strings {
     s_tray: "Pokaż ikonę w zasobniku systemowym",
     s_apply_note: "Zmiany języka i ikony zaczną działać po zamknięciu tego okna.",
     s_flyout: "Mały panel obok zasobnika systemowego (jak w Windows)",
+    about_menu: "O programie ClipShelf",
+    about_comment: "Historia schowka dla Linuksa, jak Win+V w Windows",
+    close: "Zamknij",
 };
 
 // Worded to read naturally in both European and Brazilian Portuguese.
@@ -414,6 +444,9 @@ static PT: Strings = Strings {
     s_tray: "Mostrar ícone na área de notificação",
     s_apply_note: "As alterações de idioma e do ícone aplicam-se ao fechar esta janela.",
     s_flyout: "Painel pequeno junto à área de notificação (como no Windows)",
+    about_menu: "Sobre o ClipShelf",
+    about_comment: "Histórico da área de transferência para Linux, como o Win+V no Windows",
+    close: "Fechar",
 };
 
 static RU: Strings = Strings {
@@ -451,6 +484,9 @@ static RU: Strings = Strings {
     s_tray: "Показывать значок в системном трее",
     s_apply_note: "Изменения языка и значка вступят в силу после закрытия этого окна.",
     s_flyout: "Небольшая панель возле системного трея (как в Windows)",
+    about_menu: "О программе ClipShelf",
+    about_comment: "История буфера обмена для Linux — как Win+V в Windows",
+    close: "Закрыть",
 };
 
 static TR: Strings = Strings {
@@ -488,6 +524,9 @@ static TR: Strings = Strings {
     s_tray: "Sistem tepsisinde simge göster",
     s_apply_note: "Dil ve simge değişiklikleri bu pencereyi kapattığınızda geçerli olur.",
     s_flyout: "Sistem tepsisinin yanında küçük panel (Windows'taki gibi)",
+    about_menu: "ClipShelf hakkında",
+    about_comment: "Linux için pano geçmişi, Windows'taki Win+V gibi",
+    close: "Kapat",
 };
 
 static UK: Strings = Strings {
@@ -525,6 +564,9 @@ static UK: Strings = Strings {
     s_tray: "Показувати значок у системному лотку",
     s_apply_note: "Зміни мови та значка наберуть чинності після закриття цього вікна.",
     s_flyout: "Невелика панель біля системного лотка (як у Windows)",
+    about_menu: "Про ClipShelf",
+    about_comment: "Історія буфера обміну для Linux — як Win+V у Windows",
+    close: "Закрити",
 };
 
 /// (code, name in its own language, strings)

@@ -28,7 +28,11 @@ const APP_ID: &str = "io.github.idanbarir.ClipShelf";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 const CSS: &str = "
-.clip-row { padding: 8px 6px 8px 10px; }
+.clip-row { padding: 4px 4px 4px 10px; min-height: 50px; }
+.clip-text { font-size: 0.95em; }
+.clip-more { background-color: alpha(currentColor, 0.12); border-radius: 999px; padding: 4px;
+             animation: clip-pulse 1.4s ease-in-out infinite; }
+@keyframes clip-pulse { 0% { opacity: 0.9; margin-bottom: 8px; } 50% { opacity: 0.35; margin-bottom: 3px; } 100% { opacity: 0.9; margin-bottom: 8px; } }
 .clip-meta { font-size: 0.85em; opacity: 0.65; }
 .clip-search { margin: 8px; }
 .clip-row button { min-height: 24px; min-width: 24px; padding: 2px; }
@@ -110,7 +114,7 @@ fn main() -> glib::ExitCode {
                 match cmd.as_str() {
                     "quit" => app.quit(),
                     "background" => {}
-                    "toggle" if ui.win.is_visible() => ui.hide(),
+                    "toggle" if ui.is_shown() => ui.hide(),
                     _ => ui.show(),
                 }
             }
@@ -142,6 +146,11 @@ struct Ui {
     /// Language or tray setting changed: restart when the settings window closes.
     restart_needed: Cell<bool>,
     was_active: Cell<bool>,
+    /// Panel mode: the window is minimized instead of hidden, so it never has
+    /// to be placed again (see show()/hide()).
+    flyout: bool,
+    /// The history is currently open.
+    shown: Cell<bool>,
     /// A dialog of ours is open: don't hide the popup when it takes focus.
     dialog_open: Cell<bool>,
     /// The ☰ menu is open.
@@ -181,7 +190,7 @@ impl Ui {
             .default_width(420)
             .default_height(560)
             .hide_on_close(true)
-            .icon_name("edit-paste")
+            .icon_name(APP_ID)
             .build();
 
         let header = gtk::HeaderBar::new();
@@ -193,22 +202,27 @@ impl Ui {
         header.pack_start(&clear_btn);
         let menu = gio::Menu::new();
         menu.append(Some(t.settings), Some("win.settings"));
+        menu.append(Some(t.about_menu), Some("win.about"));
         menu.append(Some(t.tray_quit), Some("win.quit"));
         let menu_btn = gtk::MenuButton::new();
         menu_btn.set_icon_name("open-menu-symbolic");
         menu_btn.set_menu_model(Some(&menu));
         menu_btn.set_tooltip_text(Some(t.settings));
+        // ✕ for the panel (a regular window has its own title-bar buttons).
+        let close_btn = gtk::Button::from_icon_name("window-close-symbolic");
+        close_btn.add_css_class("flat");
+        close_btn.set_tooltip_text(Some(t.close));
+        header.pack_end(&close_btn);
         header.pack_end(&menu_btn);
         let is_flyout = config.popup_style == "flyout" && flyout::setup(&win);
         if is_flyout {
             // Set up the window's drawing in advance (takes ~0.5 s the first
             // time), so the first Super+V opens instantly.
-            let w = win.clone();
-            glib::idle_add_local_once(move || WidgetExt::realize(&w));
             // No window frame: the bar becomes part of the panel.
             header.set_show_title_buttons(false);
             win.set_default_size(380, 480);
         } else {
+            close_btn.set_visible(false);
             win.set_titlebar(Some(&header));
         }
 
@@ -234,12 +248,34 @@ impl Ui {
             .child(&list)
             .build();
 
+        // A gently pulsing arrow at the bottom while there are more items below.
+        let more = gtk::Image::from_icon_name("go-down-symbolic");
+        more.add_css_class("clip-more");
+        more.set_halign(gtk::Align::Center);
+        more.set_valign(gtk::Align::End);
+        more.set_margin_bottom(8);
+        more.set_can_target(false);
+        more.set_visible(false);
+        let overlay = gtk::Overlay::new();
+        overlay.set_child(Some(&scroller));
+        overlay.add_overlay(&more);
+        {
+            let adj = scroller.vadjustment();
+            let m = more.clone();
+            let update = move |a: &gtk::Adjustment| {
+                m.set_visible(a.value() + a.page_size() < a.upper() - 4.0);
+            };
+            let u2 = update.clone();
+            adj.connect_value_changed(move |a| update(a));
+            adj.connect_changed(move |a| u2(a));
+        }
+
         let vbox = gtk::Box::new(gtk::Orientation::Vertical, 0);
         if is_flyout {
             vbox.append(&header);
         }
         vbox.append(&search);
-        vbox.append(&scroller);
+        vbox.append(&overlay);
         win.set_child(Some(&vbox));
 
         let paster = paste::Paster::new(&config.paste_keys, config.paste_command.clone());
@@ -258,6 +294,8 @@ impl Ui {
             restart_needed: Cell::new(false),
             config: RefCell::new(config),
             was_active: Cell::new(false),
+            flyout: is_flyout,
+            shown: Cell::new(false),
             dialog_open: Cell::new(false),
             menu_open: Cell::new(false),
             hidden_at: Cell::new(None),
@@ -265,6 +303,47 @@ impl Ui {
         });
 
         // --- signals -------------------------------------------------------
+        {
+            let w = Rc::downgrade(&ui);
+            close_btn.connect_clicked(move |_| {
+                if let Some(ui) = w.upgrade() {
+                    ui.hide();
+                }
+            });
+        }
+        if ui.flyout {
+            // On every map: make sure it is in its corner (normally it already
+            // is, thanks to the position hint), then reveal it a few frames
+            // later — or hide it again (the invisible setup run at startup).
+            let w = Rc::downgrade(&ui);
+            ui.win.connect_map(move |_| {
+                let w = w.clone();
+                glib::idle_add_local_once(move || {
+                    let Some(ui) = w.upgrade() else { return };
+                    flyout::place(&ui.win);
+                    let w = Rc::downgrade(&ui);
+                    glib::timeout_add_local_once(Duration::from_millis(40), move || {
+                        let Some(ui) = w.upgrade() else { return };
+                        if ui.shown.get() {
+                            flyout::uncloak(&ui.win);
+                        } else {
+                            ui.win.set_visible(false);
+                        }
+                    });
+                });
+            });
+            // Run it once at startup, invisibly, so the window manager knows
+            // its position before the first Super+V.
+            let w = Rc::downgrade(&ui);
+            glib::idle_add_local_once(move || {
+                if let Some(ui) = w.upgrade() {
+                    if !ui.win.is_visible() {
+                        flyout::cloak(&ui.win);
+                        ui.win.present();
+                    }
+                }
+            });
+        }
         {
             let w = Rc::downgrade(&ui);
             clear_btn.connect_clicked(move |_| {
@@ -359,14 +438,14 @@ impl Ui {
                     ui.was_active.set(true);
                     return;
                 }
-                if !ui.was_active.get() || !ui.config.borrow().hide_on_focus_loss {
+                if !ui.is_shown() || !ui.config.borrow().hide_on_focus_loss {
                     return;
                 }
                 // Focus can flicker briefly (menus, dialogs): check again shortly.
                 let w2 = Rc::downgrade(&ui);
                 glib::timeout_add_local_once(Duration::from_millis(150), move || {
                     if let Some(ui) = w2.upgrade() {
-                        if ui.win.is_visible()
+                        if ui.is_shown()
                             && !ui.win.is_active()
                             && !ui.dialog_open.get()
                             && !ui.menu_open.get()
@@ -399,6 +478,14 @@ impl Ui {
                 }
             });
             ui.win.add_action(&a);
+            let ab = gio::SimpleAction::new("about", None);
+            let w = Rc::downgrade(&ui);
+            ab.connect_activate(move |_, _| {
+                if let Some(ui) = w.upgrade() {
+                    ui.open_about();
+                }
+            });
+            ui.win.add_action(&ab);
             let q = gio::SimpleAction::new("quit", None);
             let w = Rc::downgrade(&ui);
             q.connect_activate(move |_, _| {
@@ -426,7 +513,7 @@ impl Ui {
                 }
                 if changed {
                     ui.history.borrow().save();
-                    if ui.win.is_visible() {
+                    if ui.is_shown() {
                         ui.refresh();
                     }
                 }
@@ -463,7 +550,7 @@ impl Ui {
                     .get()
                     .map(|t| t.elapsed() < Duration::from_millis(400))
                     .unwrap_or(false);
-                if self.win.is_visible() {
+                if self.is_shown() {
                     self.hide();
                 } else if !just_hidden {
                     if let Some(tok) = token {
@@ -764,9 +851,9 @@ impl Ui {
     fn show(self: &Rc<Self>) {
         self.search.set_text("");
         self.refresh();
-        if self.win.has_css_class("clip-flyout") {
-            // Invisible until it has been moved to its corner (no flash in
-            // the middle of the screen); see flyout.rs.
+        self.shown.set(true);
+        if self.flyout {
+            // Invisible until confirmed in its corner (map handler).
             flyout::cloak(&self.win);
         }
         self.win.present();
@@ -787,12 +874,45 @@ impl Ui {
         });
     }
 
-    fn hide(&self) {
-        if self.win.is_visible() {
-            self.hidden_at.set(Some(Instant::now()));
+    fn is_shown(&self) -> bool {
+        if self.flyout {
+            self.shown.get()
+        } else {
+            self.win.is_visible()
         }
+    }
+
+    fn hide(&self) {
+        if !self.is_shown() {
+            return;
+        }
+        self.hidden_at.set(Some(Instant::now()));
         self.was_active.set(false);
+        self.shown.set(false);
+        if self.flyout {
+            flyout::cloak(&self.win);
+        }
         self.win.set_visible(false);
+    }
+
+    fn open_about(&self) {
+        self.hide();
+        let about = gtk::AboutDialog::builder()
+            .program_name("ClipShelf")
+            .logo_icon_name(APP_ID)
+            .version(VERSION)
+            .comments(self.t.about_comment)
+            .copyright("© 2026 Idan Barir")
+            .license_type(gtk::License::MitX11)
+            .website("https://github.com/idanbarir/clipshelf")
+            .website_label("github.com/idanbarir/clipshelf")
+            .authors(vec!["Idan Barir".to_string()])
+            .build();
+        about.add_credit_section("Built with", &["Claude (Anthropic)", "GTK 4 & gtk-rs", "Rust"]);
+        if let Some(app) = self.win.application() {
+            about.set_application(Some(&app));
+        }
+        about.present();
     }
 
     fn id_of(&self, row: &gtk::ListBoxRow) -> Option<String> {
@@ -847,20 +967,31 @@ impl Ui {
         let hbox = gtk::Box::new(gtk::Orientation::Horizontal, 6);
         hbox.add_css_class("clip-row");
 
+        // Compact rows of (almost) equal height, like Windows: at most two
+        // lines of text, small image thumbnails.
         let (content, haystack): (gtk::Widget, Option<String>) = match e.kind {
             Kind::Text => {
                 let full = e.text.as_deref().unwrap_or("");
-                let preview: String = full.trim().chars().take(600).collect();
-                let preview = preview.replace('\t', "    ");
+                let preview: String = full.trim().chars().take(300).collect();
+                // Line breaks shown as ⏎ so long items stay within two lines.
+                let preview = preview
+                    .replace('\t', "    ")
+                    .lines()
+                    .map(str::trim_end)
+                    .filter(|l| !l.is_empty())
+                    .collect::<Vec<_>>()
+                    .join("  ⏎  ");
                 let label = gtk::Label::new(Some(&preview));
                 label.set_xalign(0.0);
                 label.set_wrap(true);
                 label.set_wrap_mode(pango::WrapMode::WordChar);
-                label.set_lines(4);
+                label.set_lines(2);
                 label.set_ellipsize(pango::EllipsizeMode::End);
                 label.set_hexpand(true);
+                label.set_valign(gtk::Align::Center);
                 label.set_width_chars(10);
                 label.set_max_width_chars(60);
+                label.add_css_class("clip-text");
                 // Right-align Hebrew/Arabic text, left-align Latin text,
                 // whatever the UI language is.
                 label.set_direction(if starts_rtl(full) {
@@ -871,26 +1002,30 @@ impl Ui {
                 (label.upcast(), Some(full.to_lowercase()))
             }
             Kind::Image => {
-                let vb = gtk::Box::new(gtk::Orientation::Vertical, 4);
-                vb.set_hexpand(true);
+                let hb = gtk::Box::new(gtk::Orientation::Horizontal, 10);
+                hb.set_hexpand(true);
                 let thumb = e.thumb_path(&dir);
                 let path = if thumb.exists() { thumb } else { e.image_path(&dir) };
                 let pic = gtk::Picture::for_filename(&path);
                 pic.set_can_shrink(true);
-                pic.set_halign(gtk::Align::Start);
-                let scale = f64::min(360.0 / e.width as f64, 140.0 / e.height as f64).min(1.0);
-                pic.set_size_request(-1, ((e.height as f64 * scale) as i32).max(16));
-                let meta = gtk::Label::new(Some(&format!("{} · {} × {}", self.t.image, e.width, e.height)));
+                pic.set_valign(gtk::Align::Center);
+                let scale = f64::min(110.0 / e.width as f64, 44.0 / e.height as f64).min(1.0);
+                pic.set_size_request(
+                    ((e.width as f64 * scale) as i32).max(16),
+                    ((e.height as f64 * scale) as i32).max(16),
+                );
+                let meta = gtk::Label::new(Some(&format!("{}\n{} × {}", self.t.image, e.width, e.height)));
                 meta.set_xalign(0.0);
+                meta.set_valign(gtk::Align::Center);
                 meta.add_css_class("clip-meta");
-                vb.append(&pic);
-                vb.append(&meta);
-                (vb.upcast(), None)
+                hb.append(&pic);
+                hb.append(&meta);
+                (hb.upcast(), None)
             }
         };
 
-        let buttons = gtk::Box::new(gtk::Orientation::Vertical, 2);
-        buttons.set_valign(gtk::Align::Start);
+        let buttons = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+        buttons.set_valign(gtk::Align::Center);
         let pin = gtk::ToggleButton::new();
         pin.set_icon_name("view-pin-symbolic");
         pin.set_active(e.pinned);

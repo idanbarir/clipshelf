@@ -7,7 +7,9 @@ EXE="$HOME/.local/bin/clipshelf"
 rm -f "$EXE" \
       "$HOME/.local/share/applications/io.github.clipshelf.Clipshelf.desktop" \
       "$HOME/.local/share/applications/io.github.idanbarir.ClipShelf.desktop" \
-      "${XDG_CONFIG_HOME:-$HOME/.config}/autostart/clipshelf.desktop"
+      "${XDG_CONFIG_HOME:-$HOME/.config}/autostart/clipshelf.desktop" \
+      "$HOME/.local/share/icons/hicolor/scalable/apps/io.github.idanbarir.ClipShelf.svg" \
+      "$HOME/.local/share/icons/hicolor/symbolic/apps/io.github.idanbarir.ClipShelf-symbolic.svg"
 
 MK=org.gnome.settings-daemon.plugins.media-keys
 KB_BASE=/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings

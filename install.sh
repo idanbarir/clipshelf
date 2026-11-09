@@ -38,6 +38,11 @@ install -Dm755 "$BIN" "$EXE"
 
 # 2. Menu entry + autostart at login.
 mkdir -p "$APP_DIR" "$AUTOSTART_DIR"
+# App icons (menu, About, tray).
+ICONS="$HOME/.local/share/icons/hicolor"
+install -Dm644 data/icons/io.github.idanbarir.ClipShelf.svg "$ICONS/scalable/apps/io.github.idanbarir.ClipShelf.svg"
+install -Dm644 data/icons/io.github.idanbarir.ClipShelf-symbolic.svg "$ICONS/symbolic/apps/io.github.idanbarir.ClipShelf-symbolic.svg"
+gtk-update-icon-cache -q -t "$ICONS" 2>/dev/null || true
 # (older versions used a different app ID)
 rm -f "$APP_DIR/io.github.clipshelf.Clipshelf.desktop"
 sed "s|^Exec=.*|Exec=$EXE|" data/clipshelf.desktop > "$APP_DIR/io.github.idanbarir.ClipShelf.desktop"

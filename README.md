@@ -8,6 +8,7 @@ That's it. No tray icon to configure, no settings maze.
 - 📋 Remembers the last 100 things you copied (text and images)
 - 🖱️ Click (or Enter) pastes straight into the window you were working in
 - 🔎 Just start typing to search
+- 📜 Compact list (about six items at a glance), with a pulsing arrow when there are more below
 - 📌 Pin items you use often — they survive "Clear all" and never fall off the list
 - 🧯 "Clear all" asks for confirmation first, so nothing disappears by a mis-click
 - 🗑️ Delete single items (trash button or the Delete key)
@@ -62,8 +63,8 @@ To remove it: `./uninstall.sh` (add `--purge` to also delete your history and se
 | Pin / unpin | 📌 button |
 | Delete an item | 🗑️ button, or **Delete** |
 | Clear everything except pinned | red **Clear all** button in the title bar (asks first) |
-| Close | **Esc**, Super+V again, or click anywhere else |
-| Settings, language, quit | **☰** button in the window, or right-click the tray icon |
+| Close | **Esc**, **✕**, Super+V again, or click anywhere else |
+| Settings, About, language, quit | **☰** button, or right-click the tray icon |
 
 ## Auto-paste on X11 and Wayland
 
