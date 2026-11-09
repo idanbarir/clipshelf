@@ -102,6 +102,15 @@ pub fn setup(win: &gtk::ApplicationWindow) -> bool {
         if let Some(s) = xsurface(w) {
             s.set_skip_taskbar_hint(true);
             s.set_skip_pager_hint(true);
+            // A utility window (like a tool palette): GNOME Shell doesn't play
+            // its window-open animation for these (only for normal windows and
+            // dialogs, js/ui/windowManager.js), and Mutter places them exactly
+            // at their declared position. Tiling extensions leave them alone.
+            // GTK writes _NET_WM_WINDOW_TYPE_NORMAL when it creates the
+            // surface, but Xlib buffers it: flush GTK's queue first so our
+            // value can't be overwritten by a late NORMAL.
+            gtk::prelude::WidgetExt::display(w).sync();
+            set_utility_type(s.xid() as u32);
         }
     });
     true
@@ -207,6 +216,24 @@ fn set_position(conn: &impl Connection, xid: u32, x: i32, y: i32) -> Option<()> 
     conn.flush().ok()
 }
 
+/// _NET_WM_WINDOW_TYPE = UTILITY (see setup()).
+fn set_utility_type(xid: u32) -> Option<()> {
+    let (conn, _) = x11rb::connect(None).ok()?;
+    let (ty, util) = (intern(&conn, "_NET_WM_WINDOW_TYPE")?, intern(&conn, "_NET_WM_WINDOW_TYPE_UTILITY")?);
+    x11rb::wrapper::ConnectionExt::change_property32(
+        &conn,
+        x11rb::protocol::xproto::PropMode::REPLACE,
+        xid,
+        ty,
+        AtomEnum::ATOM,
+        &[util],
+    )
+    .ok()?;
+    // Round trip: the property is on the server before GTK maps the window.
+    let r = conn.get_input_focus().ok()?.reply().ok().map(|_| ());
+    r
+}
+
 /// Call BEFORE showing the (hidden) panel: puts the hidden window where it
 /// must appear, so the window manager maps it there directly.
 pub fn preposition(win: &gtk::ApplicationWindow) -> Option<()> {
@@ -215,6 +242,8 @@ pub fn preposition(win: &gtk::ApplicationWindow) -> Option<()> {
     let (conn, screen) = x11rb::connect(None).ok()?;
     let root = conn.setup().roots[screen].root;
     let (x, y) = target(win, &conn, root)?;
+    gtk::prelude::WidgetExt::display(win).sync();
+    set_utility_type(xid);
     set_position(&conn, xid, x, y)
 }
 
