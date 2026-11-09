@@ -1,0 +1,4 @@
+# ClipShelf: lets the logged-in user's programs create a temporary virtual
+# keyboard, so ClipShelf can press Ctrl+V for you on Wayland after you pick an
+# item. (On X11 it isn't needed.)
+KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"

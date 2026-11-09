@@ -10,6 +10,7 @@ mod flyout;
 mod history;
 mod i18n;
 mod paste;
+mod setup;
 mod tray;
 mod watcher;
 
@@ -102,6 +103,7 @@ fn main() -> glib::ExitCode {
         app.connect_startup(move |app| {
             // Keep running in the background after the window is hidden.
             std::mem::forget(app.hold());
+            setup::run();
             *ui.borrow_mut() = Some(Ui::new(app));
         });
     }

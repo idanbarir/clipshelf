@@ -22,7 +22,21 @@ That's it. No tray icon to configure, no settings maze.
 
 ## Install
 
-### Option A: ready-made release (no compiling)
+### Ubuntu, Zorin OS, Linux Mint, Pop!_OS, Debian (recommended)
+
+1. Download `clipshelf_…_amd64.deb` from the [Releases](https://github.com/idanbarir/clipshelf/releases) page.
+2. Double-click it to install it with your software center, or run
+   `sudo apt install ./clipshelf_*_amd64.deb` in the folder you downloaded it to.
+3. Open **ClipShelf** once from your applications menu.
+
+The first time it runs, ClipShelf sets itself up for your user: it starts
+automatically at every login and registers the **Super+V** shortcut (and
+**Ctrl+Super+V** as a backup) on GNOME-based desktops. GNOME normally uses
+Super+V for the notification list; that moves to **Super+M**. The package also
+lets ClipShelf paste for you on Wayland (it allows the logged-in user to create
+a temporary virtual keyboard through `/dev/uinput`).
+
+### Other distributions: ready-made archive
 
 1. Download the latest `clipshelf-…-linux-x86_64.tar.gz` from the [Releases](https://github.com/idanbarir/clipshelf/releases) page.
 2. Extract it, open a terminal in the extracted folder, and run:

@@ -1,0 +1,14 @@
+#!/bin/sh
+set -e
+if [ "$1" = "configure" ]; then
+    # Auto-paste on Wayland: make /dev/uinput available to the logged-in user now
+    # (the files in /usr/lib take care of it after every reboot).
+    modprobe uinput 2>/dev/null || true
+    if command -v udevadm >/dev/null 2>&1; then
+        udevadm control --reload-rules 2>/dev/null || true
+        udevadm trigger --sysname-match=uinput 2>/dev/null || true
+    fi
+    # The old home-folder installer added the same rule under /etc.
+    rm -f /etc/udev/rules.d/70-clipshelf-uinput.rules /etc/modules-load.d/clipshelf-uinput.conf
+fi
+#DEBHELPER#

@@ -45,7 +45,11 @@ impl ksni::Tray for ClipTray {
     }
 
     fn icon_theme_path(&self) -> String {
-        std::env::var("HOME").map(|h| format!("{h}/.local/share/icons")).unwrap_or_default()
+        // Only needed for the old home-folder installation; a system package
+        // puts the icon in /usr/share/icons, which every tray finds anyway.
+        let dir = std::env::var("HOME").map(|h| format!("{h}/.local/share/icons")).unwrap_or_default();
+        let icon = format!("{dir}/hicolor/symbolic/apps/io.github.idanbarir.ClipShelf-symbolic.svg");
+        if std::path::Path::new(&icon).exists() { dir } else { String::new() }
     }
 
     fn tool_tip(&self) -> ToolTip {

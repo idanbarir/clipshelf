@@ -1,10 +1,13 @@
 [package]
 name = "clipshelf"
-version = "0.9.2"
+version = "0.10.0"
 edition = "2021"
 license = "MIT"
 description = "A simple Windows-style (Super+V) clipboard history for Linux, with images"
 readme = "README.md"
+authors = ["Idan Barir <idanbarir@gmail.com>"]
+homepage = "https://github.com/idanbarir/clipshelf"
+repository = "https://github.com/idanbarir/clipshelf"
 keywords = ["clipboard", "linux", "gtk4", "clipboard-manager"]
 categories = ["gui"]
 
@@ -23,3 +26,24 @@ gdk4-x11 = "0.9"
 lto = true
 strip = true
 codegen-units = 1
+
+[package.metadata.deb]
+name = "clipshelf"
+section = "utils"
+priority = "optional"
+depends = "$auto"
+extended-description = """\
+ClipShelf remembers the text and images you copy and brings them back with \
+Super+V, like the clipboard history on Windows. Click an item to paste it \
+into the window you were using."""
+maintainer-scripts = "debian/"
+assets = [
+  ["target/release/clipshelf", "usr/bin/", "755"],
+  ["data/clipshelf.desktop", "usr/share/applications/io.github.idanbarir.ClipShelf.desktop", "644"],
+  ["data/icons/io.github.idanbarir.ClipShelf.svg", "usr/share/icons/hicolor/scalable/apps/", "644"],
+  ["data/icons/io.github.idanbarir.ClipShelf-symbolic.svg", "usr/share/icons/hicolor/symbolic/apps/", "644"],
+  ["data/io.github.idanbarir.ClipShelf.metainfo.xml", "usr/share/metainfo/", "644"],
+  ["data/linux/70-clipshelf-uinput.rules", "usr/lib/udev/rules.d/", "644"],
+  ["data/linux/clipshelf-uinput.conf", "usr/lib/modules-load.d/", "644"],
+  ["README.md", "usr/share/doc/clipshelf/", "644"],
+]

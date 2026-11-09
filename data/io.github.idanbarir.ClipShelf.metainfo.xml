@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.idanbarir.ClipShelf</id>
+  <name>ClipShelf</name>
+  <summary>Clipboard history for Linux, like Win+V on Windows</summary>
+  <summary xml:lang="he">היסטוריית העתקות ללינוקס, כמו Win+V ב־Windows</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <developer id="io.github.idanbarir">
+    <name>Idan Barir</name>
+  </developer>
+  <description>
+    <p>
+      ClipShelf remembers what you copy — text and images — and brings it back
+      with Super+V. Click an item and it is pasted into the window you were
+      working in, just like the clipboard history on Windows.
+    </p>
+    <ul>
+      <li>Text and images, with a search box</li>
+      <li>Pin the items you use often</li>
+      <li>Opens as a small panel next to the system tray</li>
+      <li>Skips passwords copied from password managers</li>
+      <li>Works with right-to-left languages; the interface is available in 13 languages</li>
+    </ul>
+  </description>
+  <launchable type="desktop-id">io.github.idanbarir.ClipShelf.desktop</launchable>
+  <url type="homepage">https://github.com/idanbarir/clipshelf</url>
+  <url type="bugtracker">https://github.com/idanbarir/clipshelf/issues</url>
+  <categories>
+    <category>Utility</category>
+  </categories>
+  <keywords>
+    <keyword>clipboard</keyword>
+    <keyword>history</keyword>
+    <keyword>paste</keyword>
+  </keywords>
+  <provides>
+    <binary>clipshelf</binary>
+  </provides>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="0.10.0" date="2026-11-09">
+      <description>
+        <p>First release as a .deb package. The app now sets up its keyboard
+        shortcuts and start-at-login by itself.</p>
+      </description>
+    </release>
+  </releases>
+</component>

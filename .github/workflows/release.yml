@@ -20,6 +20,11 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Build
         run: cargo build --release --locked
+      - name: Build the .deb package
+        run: |
+          cargo install cargo-deb --locked
+          cargo deb --no-build --locked
+          echo "DEB=$(ls target/debian/*.deb)" >> "$GITHUB_ENV"
       - name: Package
         run: |
           name=clipshelf-${GITHUB_REF_NAME//\//-}-linux-x86_64
@@ -31,10 +36,14 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: clipshelf-linux-x86_64
-          path: ${{ env.ARCHIVE }}
+          path: |
+            ${{ env.ARCHIVE }}
+            ${{ env.DEB }}
       - name: Publish release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ env.ARCHIVE }}
+          files: |
+            ${{ env.ARCHIVE }}
+            ${{ env.DEB }}
           generate_release_notes: true
