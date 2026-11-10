@@ -3,7 +3,7 @@
 **A simple clipboard history for Linux that works like Windows' Win+V.**
 
 Press **Super+V**, see everything you copied — text *and* images — and click an item to paste it.
-That's it. No tray icon to configure, no settings maze.
+That's it. Nothing to configure, no settings maze.
 
 - 📋 Remembers the last 100 things you copied (text and images)
 - 🖱️ Click (or Enter) pastes straight into the window you were working in
@@ -15,9 +15,10 @@ That's it. No tray icon to configure, no settings maze.
 - 🔐 Skips passwords copied from KeePassXC and other password managers
 - 🪟 Opens as a small panel in the corner by the system tray, not in the taskbar — like Windows.
   Drag it by its title to any spot (e.g. right above the tray icon) and it opens there from then on
-- 🖱️ Tray icon next to the keyboard-language indicator: click to open, right-click for more
+- 🖱️ Tray icon next to the keyboard-language indicator, with a menu for opening the panel, settings and language
 - ⚙️ All settings in the ☰ menu — no config files needed
-- 🌍 Interface in 13 languages (follows your system language, or pick one from the tray menu), with proper right-to-left support for Hebrew and Arabic
+- 🌍 Multilingual interface in 13 languages — English, Arabic, Dutch, French, German, Hebrew, Italian, Polish, Portuguese, Russian, Spanish, Turkish and Ukrainian — following your system language or chosen from the menu, with proper right-to-left support for Hebrew and Arabic
+- ⌨️ **Ctrl+Super+V** as a backup shortcut: on some systems (IBus older than 1.5.31, e.g. Ubuntu 24.04 and Zorin OS 18) Super+V doesn't work inside text fields while a Hebrew, Arabic or other non-Latin keyboard layout is active; Ctrl+Super+V always does
 - 🪶 Small native GTK 4 app written in Rust (~1 MB), no background polling — it reacts to clipboard events
 
 ## Install

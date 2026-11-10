@@ -20,7 +20,8 @@
       <li>Pin the items you use often</li>
       <li>Opens as a small panel next to the system tray</li>
       <li>Skips passwords copied from password managers</li>
-      <li>Works with right-to-left languages; the interface is available in 13 languages</li>
+      <li>Multilingual interface in 13 languages, with right-to-left support</li>
+      <li>Ctrl+Super+V as a backup shortcut for systems where Super+V is blocked in text fields</li>
     </ul>
   </description>
   <launchable type="desktop-id">io.github.idanbarir.ClipShelf.desktop</launchable>
@@ -39,6 +40,11 @@
   </provides>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.10.1" date="2026-11-10">
+      <description>
+        <p>The tray icon shows correctly again after installing the package.</p>
+      </description>
+    </release>
     <release version="0.10.0" date="2026-11-09">
       <description>
         <p>First release as a .deb package. The app now sets up its keyboard

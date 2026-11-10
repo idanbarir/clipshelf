@@ -45,11 +45,21 @@ impl ksni::Tray for ClipTray {
     }
 
     fn icon_theme_path(&self) -> String {
-        // Only needed for the old home-folder installation; a system package
-        // puts the icon in /usr/share/icons, which every tray finds anyway.
-        let dir = std::env::var("HOME").map(|h| format!("{h}/.local/share/icons")).unwrap_or_default();
-        let icon = format!("{dir}/hicolor/symbolic/apps/io.github.idanbarir.ClipShelf-symbolic.svg");
-        if std::path::Path::new(&icon).exists() { dir } else { String::new() }
+        // Point the tray at the folder that holds our icon. Without this, the
+        // GNOME/Zorin tray looks the name up in the current icon theme only,
+        // and on Zorin it then shows a placeholder ("•••") instead.
+        let home = std::env::var("HOME").map(|h| format!("{h}/.local/share/icons")).unwrap_or_default();
+        let found = [home.as_str(), "/usr/local/share/icons", "/usr/share/icons"]
+            .into_iter()
+            .find(|d| {
+                std::path::Path::new(&format!(
+                    "{d}/hicolor/symbolic/apps/io.github.idanbarir.ClipShelf-symbolic.svg"
+                ))
+                .exists()
+            })
+            .map(str::to_string)
+            .unwrap_or_default();
+        found
     }
 
     fn tool_tip(&self) -> ToolTip {
