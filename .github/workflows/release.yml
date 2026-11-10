@@ -27,7 +27,7 @@ jobs:
           echo "DEB=$(ls target/debian/*.deb)" >> "$GITHUB_ENV"
       - name: Package
         run: |
-          name=clipshelf-${GITHUB_REF_NAME//\//-}-linux-x86_64
+          name=clipshelf-v$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)-linux-x86_64
           mkdir -p "$name/data"
           cp target/release/clipshelf install.sh uninstall.sh README.md LICENSE "$name/"
           cp -r data/* "$name/data/"
@@ -39,10 +39,22 @@ jobs:
           path: |
             ${{ env.ARCHIVE }}
             ${{ env.DEB }}
+      # A new version number in Cargo.toml on main publishes a release
+      # (tag v<version>) with the archive and the .deb attached.
+      - name: Check for a new version
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          v=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
+          if ! git ls-remote --exit-code --tags origin "refs/tags/v$v" >/dev/null; then
+            echo "NEW_TAG=v$v" >> "$GITHUB_ENV"
+          fi
       - name: Publish release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/v') || env.NEW_TAG != ''
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ env.NEW_TAG || github.ref_name }}
+          name: ClipShelf ${{ env.NEW_TAG || github.ref_name }}
+          target_commitish: ${{ github.sha }}
           files: |
             ${{ env.ARCHIVE }}
             ${{ env.DEB }}
