@@ -29,6 +29,11 @@ That's it. No tray icon to configure, no settings maze.
    `sudo apt install ./clipshelf_*_amd64.deb` in the folder you downloaded it to.
 3. Open **ClipShelf** once from your applications menu.
 
+> Upgrading from an older version that was installed with `install.sh`? Run
+> `~/.local/bin/clipshelf --quit; /usr/bin/clipshelf --background &` once after
+> installing the package. ClipShelf then removes the old copy from your home
+> folder and points the shortcuts at the new one. Your history and settings are kept.
+
 The first time it runs, ClipShelf sets itself up for your user: it starts
 automatically at every login and registers the **Super+V** shortcut (and
 **Ctrl+Super+V** as a backup) on GNOME-based desktops. GNOME normally uses
