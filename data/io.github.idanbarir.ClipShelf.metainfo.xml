@@ -40,6 +40,11 @@
   </provides>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.10.2" date="2026-11-19">
+      <description>
+        <p>Fixes the missing icon in the applications menu and the tray after upgrading from the older installer.</p>
+      </description>
+    </release>
     <release version="0.10.1" date="2026-11-10">
       <description>
         <p>The tray icon shows correctly again after installing the package.</p>

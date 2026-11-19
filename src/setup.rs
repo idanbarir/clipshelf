@@ -13,7 +13,7 @@ use gtk::prelude::*;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-const SETUP_VERSION: u32 = 1;
+const SETUP_VERSION: u32 = 2;
 const MK: &str = "org.gnome.settings-daemon.plugins.media-keys";
 const KB_SCHEMA: &str = "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding";
 const KB_BASE: &str = "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings";
@@ -163,4 +163,10 @@ fn remove_user_install(exe: &Path) {
     ] {
         let _ = fs::remove_file(h.join(f));
     }
+    // The old installer also built an icon cache there. GTK and GNOME Shell
+    // only check that cache against the date of the hicolor folder itself, not
+    // its subfolders, so after the files above are gone the cache still claims
+    // they exist — and the menu and the tray show no icon at all. Without the
+    // cache, they simply look in the folders.
+    let _ = fs::remove_file(h.join(".local/share/icons/hicolor/icon-theme.cache"));
 }
